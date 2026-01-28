@@ -149,7 +149,10 @@ export default function NoteEditorScreen() {
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
         <View style={styles.progressText}>
           <Text style={styles.progressLabel}>
-            {filledFieldsCount} of {noteData.fieldValues.length} fields completed
+            {filledFieldsCount} of {noteData.fieldValues.length} fields started
+          </Text>
+          <Text style={styles.progressFootnote}>
+            Fields can be left empty if not applicable
           </Text>
         </View>
         <View style={styles.buttonRow}>
@@ -254,6 +257,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  progressFootnote: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 2,
+    opacity: 0.7,
   },
   buttonRow: {
     flexDirection: 'row',
