@@ -21,7 +21,7 @@ function RootLayoutNav() {
         contentStyle: { backgroundColor: colors.background },
       }}
     >
-      <Stack.Screen name="index" options={{ title: "Patients" }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="patient/[id]" options={{ title: "Patient" }} />
       <Stack.Screen name="note/setup" options={{ title: "New Treatment Note" }} />
       <Stack.Screen name="note/editor" options={{ title: "Treatment Note" }} />
