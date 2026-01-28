@@ -21,10 +21,12 @@ import {
   Trash2,
   ShieldCheck,
   Info,
+  RefreshCw,
 } from 'lucide-react-native';
 import { colors, spacing, radius } from '@/constants/colors';
 import { useAuth } from '@/context/AuthContext';
 import { useSettingsStore } from '@/stores/settings-store';
+import { useClinikoUser, useClinikoCache } from '@/hooks/useCliniko';
 
 interface MenuItemProps {
   icon: React.ReactNode;
@@ -84,10 +86,32 @@ export default function SettingsScreen() {
   const { user, signOut, hasClinikoKey } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const { medicalModeEnabled, toggleMedicalMode } = useSettingsStore();
+  
+  // Fetch Cliniko user info
+  const { 
+    data: clinikoUser, 
+    isLoading: isLoadingClinikoUser,
+    refetch: refetchClinikoUser,
+    isRefetching: isRefetchingClinikoUser,
+  } = useClinikoUser({
+    enabled: hasClinikoKey,
+  });
+
+  const clinikoCache = useClinikoCache();
 
   // Get user display info
-  const displayName = user?.user_metadata?.full_name || 'User';
-  const displayEmail = user?.email || '';
+  const supabaseDisplayName = user?.user_metadata?.full_name || 'User';
+  const supabaseDisplayEmail = user?.email || '';
+
+  // Cliniko display info
+  const clinikoDisplayName = clinikoUser 
+    ? `${clinikoUser.first_name} ${clinikoUser.last_name}`.trim()
+    : null;
+  const clinikoDisplayEmail = clinikoUser?.email || null;
+
+  // Determine which name/email to show in profile card
+  const displayName = clinikoDisplayName || supabaseDisplayName;
+  const displayEmail = clinikoDisplayEmail || supabaseDisplayEmail;
 
   // Handle medical mode toggle with confirmation
   const handleMedicalModeToggle = () => {
@@ -105,6 +129,17 @@ export default function SettingsScreen() {
       );
     } else {
       toggleMedicalMode();
+    }
+  };
+
+  const handleRefreshClinikoData = async () => {
+    if (!hasClinikoKey) return;
+    
+    try {
+      await refetchClinikoUser();
+      clinikoCache.invalidateAll();
+    } catch (error) {
+      console.error('Failed to refresh Cliniko data:', error);
     }
   };
 
@@ -166,6 +201,11 @@ export default function SettingsScreen() {
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{displayName}</Text>
             <Text style={styles.profileEmail}>{displayEmail}</Text>
+            {clinikoDisplayName && supabaseDisplayEmail !== clinikoDisplayEmail && (
+              <Text style={styles.profileSecondaryEmail}>
+                Supabase: {supabaseDisplayEmail}
+              </Text>
+            )}
           </View>
           <ChevronRight size={20} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -180,6 +220,43 @@ export default function SettingsScreen() {
               statusDot={hasClinikoKey ? "green" : "red"}
               onPress={() => router.push('/settings/api-key')}
             />
+            {hasClinikoKey && (
+              <>
+                <View style={styles.separator} />
+                <View style={styles.clinikoInfoRow}>
+                  <View style={styles.clinikoInfoContent}>
+                    <Text style={styles.clinikoInfoLabel}>Cliniko Account</Text>
+                    {isLoadingClinikoUser ? (
+                      <ActivityIndicator size="small" color={colors.textSecondary} />
+                    ) : clinikoUser ? (
+                      <View>
+                        <Text style={styles.clinikoInfoValue}>
+                          {clinikoUser.first_name} {clinikoUser.last_name}
+                        </Text>
+                        <Text style={styles.clinikoInfoEmail}>
+                          {clinikoUser.email}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.clinikoInfoError}>
+                        Could not load account info
+                      </Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    onPress={handleRefreshClinikoData}
+                    style={styles.refreshButton}
+                    disabled={isRefetchingClinikoUser}
+                  >
+                    <RefreshCw 
+                      size={18} 
+                      color={colors.primary}
+                      style={isRefetchingClinikoUser ? styles.spinning : undefined}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         </View>
 
@@ -302,6 +379,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
+  profileSecondaryEmail: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
   section: {
     marginBottom: spacing.lg,
   },
@@ -395,5 +478,41 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.md,
+  },
+  clinikoInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+  },
+  clinikoInfoContent: {
+    flex: 1,
+  },
+  clinikoInfoLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  clinikoInfoValue: {
+    fontSize: 15,
+    color: colors.textPrimary,
+    fontWeight: '500' as const,
+  },
+  clinikoInfoEmail: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  clinikoInfoError: {
+    fontSize: 14,
+    color: colors.error,
+    fontStyle: 'italic',
+  },
+  refreshButton: {
+    padding: spacing.sm,
+  },
+  spinning: {
+    opacity: 0.5,
   },
 });

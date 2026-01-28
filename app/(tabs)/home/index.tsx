@@ -6,14 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Plus, FileText, Users, LayoutTemplate, Search, ChevronRight } from 'lucide-react-native';
+import { Plus, FileText, Users, LayoutTemplate, Search, ChevronRight, AlertCircle } from 'lucide-react-native';
 import { BottomSheet } from '@/components/BottomSheet';
-import { patients, Patient } from '@/mocks/patients';
-import { useNote } from '@/context/NoteContext';
+import { useClinikoPatients } from '@/hooks/useCliniko';
+import { useNote, Patient } from '@/context/NoteContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '@/constants/colors';
+import { AppPatient } from '@/services/cliniko';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -25,11 +27,24 @@ export default function HomeScreen() {
 
   const activePatient = noteData.patient;
 
+  // Fetch patients from Cliniko
+  const {
+    data: patientsData,
+    isLoading: isLoadingPatients,
+    isError: isPatientsError,
+    refetch: refetchPatients,
+  } = useClinikoPatients(
+    { archived: false },
+    { enabled: showPatientSheet } // Only fetch when sheet is opened
+  );
+
+  const patients = patientsData?.patients ?? [];
+
   const filteredPatients = useMemo(() => {
     if (!searchQuery.trim()) return patients;
     const query = searchQuery.toLowerCase();
     return patients.filter(p => p.name.toLowerCase().includes(query));
-  }, [searchQuery]);
+  }, [searchQuery, patients]);
 
   const handleStartNote = () => {
     console.log('Starting new treatment note, active patient:', activePatient?.name);
@@ -40,9 +55,18 @@ export default function HomeScreen() {
     }
   };
 
-  const handleSelectPatient = (patient: Patient) => {
+  const handleSelectPatient = (patient: AppPatient) => {
     console.log('Selected patient:', patient.name);
-    setPatient(patient);
+    // Convert AppPatient to Patient type for NoteContext
+    const notePatient: Patient = {
+      id: patient.id,
+      name: patient.name,
+      email: patient.email ?? '',
+      phone: patient.phone ?? '',
+      dateOfBirth: patient.dateOfBirth ?? '',
+      lastAppointment: patient.lastAppointment,
+    };
+    setPatient(notePatient);
     setShowPatientSheet(false);
     setSearchQuery('');
     router.push('/note/setup');
@@ -146,33 +170,54 @@ export default function HomeScreen() {
             />
           </View>
 
-          <ScrollView style={styles.patientList} showsVerticalScrollIndicator={false}>
-            {filteredPatients.map((patient, index) => (
-              <TouchableOpacity
-                key={patient.id}
-                style={[
-                  styles.patientRow,
-                  index === filteredPatients.length - 1 && styles.lastPatientRow,
-                ]}
-                onPress={() => handleSelectPatient(patient)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.patientAvatar}>
-                  <Text style={styles.patientInitial}>
-                    {patient.name.charAt(0)}
-                  </Text>
-                </View>
-                <View style={styles.patientInfo}>
-                  <Text style={styles.patientName}>{patient.name}</Text>
-                  <Text style={styles.patientEmail}>{patient.email}</Text>
-                </View>
-                <ChevronRight size={18} color={colors.textSecondary} />
+          {isLoadingPatients ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Loading patients...</Text>
+            </View>
+          ) : isPatientsError ? (
+            <View style={styles.errorContainer}>
+              <AlertCircle size={32} color={colors.error} />
+              <Text style={styles.errorText}>Failed to load patients</Text>
+              <TouchableOpacity onPress={() => refetchPatients()} style={styles.retryButton}>
+                <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
-            ))}
-            {filteredPatients.length === 0 && (
-              <Text style={styles.noResults}>No patients found</Text>
-            )}
-          </ScrollView>
+            </View>
+          ) : (
+            <ScrollView style={styles.patientList} showsVerticalScrollIndicator={false}>
+              {filteredPatients.map((patient, index) => (
+                <TouchableOpacity
+                  key={patient.id}
+                  style={[
+                    styles.patientRow,
+                    index === filteredPatients.length - 1 && styles.lastPatientRow,
+                  ]}
+                  onPress={() => handleSelectPatient(patient)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.patientAvatar}>
+                    <Text style={styles.patientInitial}>
+                      {patient.name.charAt(0)}
+                    </Text>
+                  </View>
+                  <View style={styles.patientInfo}>
+                    <Text style={styles.patientName}>{patient.name}</Text>
+                    <Text style={styles.patientEmail}>
+                      {patient.email ?? patient.dateOfBirth ?? 'No contact info'}
+                    </Text>
+                  </View>
+                  <ChevronRight size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              ))}
+              {filteredPatients.length === 0 && !isLoadingPatients && (
+                <Text style={styles.noResults}>
+                  {searchQuery.trim() 
+                    ? 'No patients found matching your search'
+                    : 'No patients found'}
+                </Text>
+              )}
+            </ScrollView>
+          )}
         </View>
       </BottomSheet>
     </View>
@@ -309,6 +354,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textPrimary,
     padding: 0,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl * 2,
+  },
+  loadingText: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  errorText: {
+    fontSize: 15,
+    color: colors.error,
+    marginTop: spacing.sm,
+  },
+  retryButton: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.primary,
+    borderRadius: radius.sm,
+  },
+  retryButtonText: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    fontWeight: '500' as const,
   },
   patientList: {
     maxHeight: 320,

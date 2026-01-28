@@ -10,14 +10,14 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
-import { List } from 'lucide-react-native';
+import { List, Mic, MicOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SecondaryButton } from '@/components/SecondaryButton';
 import { NoteTextField } from '@/components/NoteTextField';
 import { BottomSheet } from '@/components/BottomSheet';
 import { DictationSheet } from '@/components/DictationSheet';
-import { colors, spacing } from '@/constants/colors';
+import { colors, spacing, radius } from '@/constants/colors';
 import { useNote } from '@/context/NoteContext';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -32,6 +32,8 @@ export default function NoteEditorScreen() {
     appendToField,
     replaceFieldValue,
     filledFieldsCount,
+    fieldsBySection,
+    voiceFillableFields,
   } = useNote();
 
   const [fieldsSheetVisible, setFieldsSheetVisible] = useState(false);
@@ -176,31 +178,65 @@ export default function NoteEditorScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {noteData.fieldValues.map((fieldValue, index) => {
-          const templateField = noteData.template?.fields.find(
-            f => f.id === fieldValue.fieldId
-          );
-          return (
-            <View
-              key={fieldValue.fieldId}
-              onLayout={(e) => handleFieldLayout(fieldValue.fieldId, e.nativeEvent.layout.y)}
-            >
-              <NoteTextField
-                label={fieldValue.label}
-                value={fieldValue.value}
-                placeholder={templateField?.placeholder ?? 'Tap to type or dictate…'}
-                onChangeText={(text) => updateFieldValue(fieldValue.fieldId, text)}
-                onMicPress={() => handleMicPress(fieldValue.fieldId)}
-              />
+        {/* Render fields grouped by section */}
+        {fieldsBySection.map((section, sectionIndex) => (
+          <View key={`section-${sectionIndex}`} style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{section.name}</Text>
+              <View style={styles.sectionBadges}>
+                <View style={styles.sectionBadge}>
+                  <Mic size={10} color={colors.success} />
+                  <Text style={styles.sectionBadgeText}>
+                    {section.fields.filter(f => f.isVoiceFillable).length}
+                  </Text>
+                </View>
+                {section.fields.filter(f => !f.isVoiceFillable).length > 0 && (
+                  <View style={[styles.sectionBadge, styles.sectionBadgeSecondary]}>
+                    <MicOff size={10} color={colors.textSecondary} />
+                    <Text style={styles.sectionBadgeTextSecondary}>
+                      {section.fields.filter(f => !f.isVoiceFillable).length}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
-          );
-        })}
+
+            {section.fields.map((fieldValue) => (
+              <View
+                key={fieldValue.fieldId}
+                onLayout={(e) => handleFieldLayout(fieldValue.fieldId, e.nativeEvent.layout.y)}
+              >
+                {fieldValue.isVoiceFillable ? (
+                  <NoteTextField
+                    label={fieldValue.label}
+                    value={fieldValue.value}
+                    placeholder={`Tap to type or dictate ${fieldValue.label.toLowerCase()}...`}
+                    onChangeText={(text) => updateFieldValue(fieldValue.fieldId, text)}
+                    onMicPress={() => handleMicPress(fieldValue.fieldId)}
+                  />
+                ) : (
+                  // Non-voice-fillable fields - read-only display or manual entry
+                  <View style={styles.nonVoiceField}>
+                    <View style={styles.nonVoiceFieldHeader}>
+                      <MicOff size={14} color={colors.textSecondary} />
+                      <Text style={styles.nonVoiceFieldLabel}>{fieldValue.label}</Text>
+                    </View>
+                    <Text style={styles.nonVoiceFieldHint}>
+                      {fieldValue.questionType} - Manual entry only
+                    </Text>
+                    {/* Could add manual input here for non-voice fields */}
+                  </View>
+                )}
+              </View>
+            ))}
+          </View>
+        ))}
       </ScrollView>
 
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
         <View style={styles.progressText}>
           <Text style={styles.progressLabel}>
-            {filledFieldsCount} of {noteData.fieldValues.length} fields started
+            {filledFieldsCount} of {voiceFillableFields.length} voice fields started
           </Text>
           <Text style={styles.progressFootnote}>
             Fields can be left empty if not applicable
@@ -220,6 +256,7 @@ export default function NoteEditorScreen() {
         </View>
       </View>
 
+      {/* Jump to Field Sheet */}
       <BottomSheet
         visible={fieldsSheetVisible}
         onClose={() => setFieldsSheetVisible(false)}
@@ -227,27 +264,35 @@ export default function NoteEditorScreen() {
       >
         <View style={styles.sheetContent}>
           <Text style={styles.sheetTitle}>Jump to Field</Text>
-          {noteData.fieldValues.map((fieldValue, index) => (
-            <TouchableOpacity
-              key={fieldValue.fieldId}
-              style={styles.fieldItem}
-              onPress={() => scrollToField(fieldValue.fieldId)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.fieldItemLeft}>
-                <Text style={styles.fieldItemNumber}>{index + 1}</Text>
-                <Text style={styles.fieldItemLabel}>{fieldValue.label}</Text>
+          <ScrollView style={styles.fieldList} showsVerticalScrollIndicator={false}>
+            {fieldsBySection.map((section, sectionIndex) => (
+              <View key={`section-list-${sectionIndex}`}>
+                <Text style={styles.sheetSectionTitle}>{section.name}</Text>
+                {section.fields.filter(f => f.isVoiceFillable).map((fieldValue, index) => (
+                  <TouchableOpacity
+                    key={fieldValue.fieldId}
+                    style={styles.fieldItem}
+                    onPress={() => scrollToField(fieldValue.fieldId)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.fieldItemLeft}>
+                      <Mic size={14} color={fieldValue.value.trim() ? colors.success : colors.textSecondary} />
+                      <Text style={styles.fieldItemLabel}>{fieldValue.label}</Text>
+                    </View>
+                    {fieldValue.value.trim() && (
+                      <View style={styles.filledBadge}>
+                        <Text style={styles.filledBadgeText}>✓</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
               </View>
-              {fieldValue.value.trim() && (
-                <View style={styles.filledBadge}>
-                  <Text style={styles.filledBadgeText}>✓</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
+            ))}
+          </ScrollView>
         </View>
       </BottomSheet>
 
+      {/* Dictation Sheet */}
       <DictationSheet
         visible={dictationVisible}
         onClose={() => setDictationVisible(false)}
@@ -285,7 +330,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '500' as const,
-    whiteSpace: 'nowrap',
   },
   tooltipArrow: {
     position: 'absolute',
@@ -322,6 +366,74 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
+  },
+  sectionContainer: {
+    marginBottom: spacing.lg,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+    paddingBottom: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: colors.primary,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  sectionBadges: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  sectionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: colors.success + '15',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+  },
+  sectionBadgeSecondary: {
+    backgroundColor: colors.backgroundSecondary,
+  },
+  sectionBadgeText: {
+    fontSize: 11,
+    color: colors.success,
+    fontWeight: '500' as const,
+  },
+  sectionBadgeTextSecondary: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '500' as const,
+  },
+  nonVoiceField: {
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    opacity: 0.7,
+  },
+  nonVoiceFieldHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  nonVoiceFieldLabel: {
+    fontSize: 14,
+    fontWeight: '500' as const,
+    color: colors.textSecondary,
+  },
+  nonVoiceFieldHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
+    fontStyle: 'italic' as const,
   },
   bottomBar: {
     position: 'absolute',
@@ -374,11 +486,23 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.md,
   },
+  fieldList: {
+    maxHeight: SCREEN_HEIGHT * 0.4,
+  },
+  sheetSectionTitle: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: colors.primary,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
   fieldItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
@@ -387,33 +511,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  fieldItemNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.backgroundSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-    fontSize: 13,
-    color: colors.textSecondary,
-    fontWeight: '600' as const,
-    overflow: 'hidden',
-  },
   fieldItemLabel: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textPrimary,
   },
   filledBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
   },
   filledBadgeText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600' as const,
   },
 });

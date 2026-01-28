@@ -6,7 +6,13 @@
     "start": "bunx rork start -p hrfis6vjv8qaffjp3v231 --tunnel",
     "start-web": "bunx rork start -p hrfis6vjv8qaffjp3v231 --web --tunnel",
     "start-web-dev": "DEBUG=expo* bunx rork start -p hrfis6vjv8qaffjp3v231 --web --tunnel",
-    "lint": "expo lint"
+    "dev": "expo start --port 8002",
+    "dev:ios": "expo start --port 8002 --ios",
+    "dev:android": "expo start --port 8002 --android",
+    "dev:web": "expo start --port 8002 --web",
+    "lint": "expo lint",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -18,8 +24,8 @@
     "@tanstack/react-query": "^5.83.0",
     "@ungap/structured-clone": "^1.3.0",
     "expo": "~54.0.27",
-    "expo-av": "~15.0.3",
     "expo-auth-session": "^7.0.10",
+    "expo-av": "~16.0.8",
     "expo-blur": "~15.0.8",
     "expo-constants": "~18.0.11",
     "expo-crypto": "^15.0.8",
@@ -48,6 +54,7 @@
     "react-native-svg": "15.12.1",
     "react-native-web": "^0.21.0",
     "react-native-worklets": "0.5.1",
+    "zod": "^4.3.6",
     "zustand": "^5.0.2"
   },
   "devDependencies": {

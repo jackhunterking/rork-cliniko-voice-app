@@ -4,11 +4,15 @@ import { Session, User, AuthError } from '@supabase/supabase-js';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as Linking from 'expo-linking';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import {
   hasClinikoApiKey as checkClinikoKey,
-  deleteClinikoApiKey,
+  clearAllClinikoData,
+  getCoupledUserId,
+  isClinikoConfigured,
 } from '@/lib/secure-storage';
+import { clinikoKeys } from '@/hooks/useCliniko';
 
 export interface AuthState {
   session: Session | null;
@@ -32,12 +36,32 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasClinikoKey, setHasClinikoKey] = useState(false);
+  
+  // Get query client for cache management
+  const queryClient = useQueryClient();
 
-  // Check Cliniko key status
+  // Check Cliniko key status and validate it's for the current user
   const refreshClinikoKeyStatus = useCallback(async () => {
-    const hasKey = await checkClinikoKey();
-    setHasClinikoKey(hasKey);
+    const isConfigured = await isClinikoConfigured();
+    setHasClinikoKey(isConfigured);
   }, []);
+
+  // Validate that Cliniko credentials belong to the current user
+  const validateClinikoCredentialOwnership = useCallback(async (currentUserId: string) => {
+    const coupledUserId = await getCoupledUserId();
+    
+    // If there's a coupled user ID and it doesn't match, clear credentials
+    if (coupledUserId && coupledUserId !== currentUserId) {
+      console.log('[Auth] Cliniko credentials belong to different user, clearing...');
+      await clearAllClinikoData();
+      // Clear all Cliniko-related cache
+      queryClient.removeQueries({ queryKey: clinikoKeys.all });
+      setHasClinikoKey(false);
+      return false;
+    }
+    
+    return true;
+  }, [queryClient]);
 
   // Handle deep link URL to create session
   const createSessionFromUrl = useCallback(async (url: string) => {
@@ -68,12 +92,15 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       if (data.session) {
         setSession(data.session);
         setUser(data.session.user);
+        
+        // Validate Cliniko credentials belong to this user
+        await validateClinikoCredentialOwnership(data.session.user.id);
         await refreshClinikoKeyStatus();
       }
     } catch (error) {
       console.error('Error processing deep link:', error);
     }
-  }, [refreshClinikoKeyStatus]);
+  }, [refreshClinikoKeyStatus, validateClinikoCredentialOwnership]);
 
   // Initialize auth state and handle deep links
   useEffect(() => {
@@ -90,8 +117,13 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
           
           // Check Cliniko key if user is authenticated
           if (initialSession?.user) {
-            const hasKey = await checkClinikoKey();
-            setHasClinikoKey(hasKey);
+            // First validate ownership
+            const isValid = await validateClinikoCredentialOwnership(initialSession.user.id);
+            
+            if (isValid) {
+              const isConfigured = await isClinikoConfigured();
+              setHasClinikoKey(isConfigured);
+            }
           }
           
           setIsLoading(false);
@@ -112,14 +144,29 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         console.log('Auth state changed:', event);
         
         if (mounted) {
+          const previousUserId = user?.id;
+          const newUserId = newSession?.user?.id;
+          
           setSession(newSession);
           setUser(newSession?.user ?? null);
           
           if (newSession?.user) {
-            // Re-check Cliniko key on auth changes
-            const hasKey = await checkClinikoKey();
-            setHasClinikoKey(hasKey);
+            // Check if user changed
+            if (previousUserId && previousUserId !== newUserId) {
+              console.log('[Auth] User changed, clearing previous Cliniko data');
+              await clearAllClinikoData();
+              queryClient.removeQueries({ queryKey: clinikoKeys.all });
+              setHasClinikoKey(false);
+            } else {
+              // Same user or new login, validate credentials
+              const isValid = await validateClinikoCredentialOwnership(newSession.user.id);
+              if (isValid) {
+                const isConfigured = await isClinikoConfigured();
+                setHasClinikoKey(isConfigured);
+              }
+            }
           } else {
+            // User signed out
             setHasClinikoKey(false);
           }
         }
@@ -130,7 +177,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [validateClinikoCredentialOwnership]);
 
   // Handle deep links when app is opened via URL
   useEffect(() => {
@@ -179,22 +226,29 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       });
       
       if (!error && data.session) {
+        await validateClinikoCredentialOwnership(data.session.user.id);
         await refreshClinikoKeyStatus();
       }
       
       return { error };
     },
-    [refreshClinikoKeyStatus]
+    [refreshClinikoKeyStatus, validateClinikoCredentialOwnership]
   );
 
   const signOut = useCallback(async () => {
-    // Clear Cliniko API key on sign out
-    await deleteClinikoApiKey();
+    console.log('[Auth] Signing out, clearing all Cliniko data...');
+    
+    // Clear Cliniko credentials from secure storage
+    await clearAllClinikoData();
+    
+    // Clear all Cliniko-related cache
+    queryClient.removeQueries({ queryKey: clinikoKeys.all });
+    
     setHasClinikoKey(false);
     
     // Sign out from Supabase
     await supabase.auth.signOut();
-  }, []);
+  }, [queryClient]);
 
   return {
     // State

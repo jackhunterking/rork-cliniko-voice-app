@@ -11,24 +11,30 @@ import {
   ScrollView,
   ActivityIndicator,
   Linking,
+  Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Link2, Eye, EyeOff, ExternalLink } from "lucide-react-native";
+import { Link2, Eye, EyeOff, ExternalLink, ChevronDown, Check, Globe } from "lucide-react-native";
 import { colors, spacing, radius } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
-import { saveClinikoApiKey } from "@/lib/secure-storage";
+import { saveClinikoCredentials } from "@/lib/secure-storage";
+import { validateClinikoCredentials, CLINIKO_SHARDS, ClinikoShard, ClinikoShardConfig } from "@/services/cliniko";
 
 export default function ConnectClinikoScreen() {
   const router = useRouter();
-  const { refreshClinikoKeyStatus, signOut } = useAuth();
+  const { refreshClinikoKeyStatus, signOut, user } = useAuth();
   
   const [apiKey, setApiKey] = useState("");
+  const [selectedShard, setSelectedShard] = useState<ClinikoShardConfig>(CLINIKO_SHARDS[0]);
   const [showKey, setShowKey] = useState(false);
+  const [showShardPicker, setShowShardPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [validationMessage, setValidationMessage] = useState("");
 
   const handleSaveKey = async () => {
     setError("");
+    setValidationMessage("");
     
     const trimmedKey = apiKey.trim();
     
@@ -43,22 +49,53 @@ export default function ConnectClinikoScreen() {
       return;
     }
 
+    if (!user?.id) {
+      setError("You must be signed in to connect Cliniko");
+      return;
+    }
+
     setIsLoading(true);
+    setValidationMessage("Validating API key...");
     
     try {
-      // Save to secure storage
-      await saveClinikoApiKey(trimmedKey);
+      // Validate the API key by calling Cliniko
+      const validation = await validateClinikoCredentials(trimmedKey, selectedShard.id);
+      
+      if (!validation.valid) {
+        setError("Invalid API key or incorrect region. Please check your credentials and try again.");
+        setValidationMessage("");
+        return;
+      }
+
+      setValidationMessage("Saving credentials...");
+
+      // Save all credentials together with the coupled user ID
+      await saveClinikoCredentials(trimmedKey, selectedShard.id, user.id);
       
       // Update auth context
       await refreshClinikoKeyStatus();
       
+      console.log(`[Cliniko] Connected as ${validation.user?.firstName} ${validation.user?.lastName}`);
+      
       // Navigation will be handled by AuthGuard
       router.replace("/(tabs)/home");
     } catch (err) {
-      console.error("Failed to save API key:", err);
-      setError("Failed to save API key. Please try again.");
+      console.error("Failed to connect Cliniko:", err);
+      
+      if (err instanceof Error) {
+        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+          setError("Invalid API key. Please check your key and selected region.");
+        } else if (err.message.includes('Network') || err.message.includes('fetch')) {
+          setError("Network error. Please check your connection and try again.");
+        } else {
+          setError(err.message || "Failed to connect. Please try again.");
+        }
+      } else {
+        setError("Failed to connect. Please try again.");
+      }
     } finally {
       setIsLoading(false);
+      setValidationMessage("");
     }
   };
 
@@ -69,6 +106,12 @@ export default function ConnectClinikoScreen() {
   const handleSignOut = async () => {
     await signOut();
     // Navigation will be handled by AuthGuard
+  };
+
+  const handleSelectShard = (shard: ClinikoShardConfig) => {
+    setSelectedShard(shard);
+    setShowShardPicker(false);
+    setError(""); // Clear any previous errors
   };
 
   const isFormValid = apiKey.trim().length > 0;
@@ -102,20 +145,37 @@ export default function ConnectClinikoScreen() {
           ) : null}
 
           <View style={styles.formCard}>
+            {/* Region Picker */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Region</Text>
+              <TouchableOpacity
+                style={styles.shardSelector}
+                onPress={() => setShowShardPicker(true)}
+                activeOpacity={0.7}
+                disabled={isLoading}
+              >
+                <View style={styles.shardSelectorContent}>
+                  <Globe size={18} color={colors.textSecondary} />
+                  <Text style={styles.shardSelectorText}>{selectedShard.label}</Text>
+                </View>
+                <ChevronDown size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+              <Text style={styles.inputHint}>
+                Select the region where your Cliniko account is hosted
+              </Text>
+            </View>
+
+            <View style={styles.separator} />
+
+            {/* API Key Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>API Key</Text>
               <View style={styles.inputContainer}>
                 <TextInput
                   style={styles.input}
-                  value={showKey ? apiKey : apiKey.replace(/./g, "•")}
+                  value={apiKey}
                   onChangeText={(text) => {
-                    // If showing masked, we need to handle this differently
-                    if (showKey) {
-                      setApiKey(text);
-                    } else {
-                      // When masked, just set the new text
-                      setApiKey(text);
-                    }
+                    setApiKey(text);
                     if (error) setError("");
                   }}
                   placeholder="Paste your API key here"
@@ -151,6 +211,13 @@ export default function ConnectClinikoScreen() {
             <ExternalLink size={14} color={colors.primary} />
           </TouchableOpacity>
 
+          {validationMessage ? (
+            <View style={styles.validationContainer}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.validationText}>{validationMessage}</Text>
+            </View>
+          ) : null}
+
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[
@@ -183,6 +250,52 @@ export default function ConnectClinikoScreen() {
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Shard Picker Modal */}
+      <Modal
+        visible={showShardPicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowShardPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Region</Text>
+              <TouchableOpacity
+                onPress={() => setShowShardPicker(false)}
+                style={styles.modalCloseButton}
+              >
+                <Text style={styles.modalCloseText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSubtitle}>
+              Choose the region where your Cliniko account is hosted
+            </Text>
+            <ScrollView style={styles.shardList}>
+              {CLINIKO_SHARDS.map((shard) => (
+                <TouchableOpacity
+                  key={shard.id}
+                  style={[
+                    styles.shardOption,
+                    selectedShard.id === shard.id && styles.shardOptionSelected,
+                  ]}
+                  onPress={() => handleSelectShard(shard)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.shardOptionContent}>
+                    <Text style={styles.shardOptionLabel}>{shard.label}</Text>
+                    <Text style={styles.shardOptionRegion}>{shard.region}</Text>
+                  </View>
+                  {selectedShard.id === shard.id && (
+                    <Check size={20} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -273,8 +386,38 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     padding: 0,
   },
+  inputHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 6,
+  },
   eyeButton: {
     padding: spacing.xs,
+  },
+  shardSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.background,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+  },
+  shardSelectorContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  shardSelectorText: {
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.md,
   },
   helpLink: {
     flexDirection: "row",
@@ -287,6 +430,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.primary,
     fontWeight: "500" as const,
+  },
+  validationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: spacing.sm,
+  },
+  validationText: {
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   buttonContainer: {
     marginTop: spacing.lg,
@@ -327,5 +481,78 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: spacing.xl,
     lineHeight: 18,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: spacing.md,
+    paddingBottom: 40,
+    maxHeight: "70%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "600" as const,
+    color: colors.textPrimary,
+  },
+  modalCloseButton: {
+    padding: spacing.xs,
+  },
+  modalCloseText: {
+    fontSize: 16,
+    fontWeight: "500" as const,
+    color: colors.primary,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  shardList: {
+    paddingHorizontal: spacing.lg,
+  },
+  shardOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  shardOptionSelected: {
+    backgroundColor: colors.primaryLight,
+    marginHorizontal: -spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.sm,
+    borderBottomWidth: 0,
+  },
+  shardOptionContent: {
+    flex: 1,
+  },
+  shardOptionLabel: {
+    fontSize: 16,
+    fontWeight: "500" as const,
+    color: colors.textPrimary,
+  },
+  shardOptionRegion: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
 });

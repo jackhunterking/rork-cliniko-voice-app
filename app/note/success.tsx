@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { Check } from 'lucide-react-native';
+import { Check, FileText } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SecondaryButton } from '@/components/SecondaryButton';
@@ -11,7 +11,7 @@ import { useNote } from '@/context/NoteContext';
 export default function NoteSuccessScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { type } = useLocalSearchParams<{ type: string }>();
+  const { type, noteId } = useLocalSearchParams<{ type: string; noteId?: string }>();
   const { noteData, resetNote } = useNote();
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -48,6 +48,12 @@ export default function NoteSuccessScreen() {
     router.replace('/(tabs)/patients');
   };
 
+  const handleBackToHome = () => {
+    console.log('Returning to home');
+    resetNote();
+    router.replace('/(tabs)/home');
+  };
+
   return (
     <View style={styles.container}>
       <Stack.Screen
@@ -75,8 +81,8 @@ export default function NoteSuccessScreen() {
           </Text>
           <Text style={styles.subtitle}>
             {isDraft
-              ? 'Your treatment note has been saved as a draft.'
-              : 'The treatment note has been saved successfully.'}
+              ? 'Your treatment note has been saved as a draft in Cliniko.'
+              : 'The treatment note has been saved successfully to Cliniko.'}
           </Text>
 
           {noteData.patient && (
@@ -85,19 +91,43 @@ export default function NoteSuccessScreen() {
               <Text style={styles.patientName}>{noteData.patient.name}</Text>
             </View>
           )}
+
+          {noteId && (
+            <View style={styles.noteInfo}>
+              <FileText size={16} color={colors.primary} />
+              <Text style={styles.noteIdLabel}>Cliniko Note ID:</Text>
+              <Text style={styles.noteIdValue}>{noteId}</Text>
+            </View>
+          )}
+
+          {noteData.template && (
+            <View style={styles.templateInfo}>
+              <Text style={styles.templateLabel}>Template used</Text>
+              <Text style={styles.templateName}>{noteData.template.name}</Text>
+            </View>
+          )}
         </Animated.View>
       </View>
 
       <View style={[styles.bottomActions, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <PrimaryButton
-          title="Create another note"
-          onPress={handleCreateAnother}
-        />
-        <SecondaryButton
-          title="Back to patients"
-          onPress={handleBackToPatients}
-          style={{ marginTop: spacing.sm }}
-        />
+        {noteData.patient ? (
+          <>
+            <PrimaryButton
+              title="Create another note"
+              onPress={handleCreateAnother}
+            />
+            <SecondaryButton
+              title="Back to patients"
+              onPress={handleBackToPatients}
+              style={{ marginTop: spacing.sm }}
+            />
+          </>
+        ) : (
+          <PrimaryButton
+            title="Back to home"
+            onPress={handleBackToHome}
+          />
+        )}
       </View>
     </View>
   );
@@ -159,6 +189,40 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: colors.textPrimary,
     marginTop: 4,
+  },
+  noteInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: 6,
+  },
+  noteIdLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  noteIdValue: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: colors.primary,
+  },
+  templateInfo: {
+    marginTop: spacing.md,
+    alignItems: 'center',
+  },
+  templateLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  templateName: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    marginTop: 2,
   },
   bottomActions: {
     paddingHorizontal: spacing.lg,

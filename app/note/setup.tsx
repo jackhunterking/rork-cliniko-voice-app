@@ -6,17 +6,18 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { ChevronRight, Check, ChevronDown } from 'lucide-react-native';
+import { ChevronRight, Check, ChevronDown, AlertCircle, Mic, MicOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Card } from '@/components/Card';
 import { BottomSheet } from '@/components/BottomSheet';
 import { colors, spacing, radius } from '@/constants/colors';
-import { templates, Template } from '@/mocks/templates';
-import { getAppointmentsForPatient } from '@/mocks/appointments';
+import { useClinikoTemplatesFull, useClinikoTemplate } from '@/hooks/useCliniko';
 import { useNote } from '@/context/NoteContext';
+import { ClinikoTreatmentNoteTemplate, isVoiceFillable } from '@/services/cliniko';
 
 export default function NoteSetupScreen() {
   const router = useRouter();
@@ -27,22 +28,35 @@ export default function NoteSetupScreen() {
     setAppointment,
     setCopyPreviousNote,
     isSetupComplete,
+    templateSummary,
   } = useNote();
 
   const [templateSheetVisible, setTemplateSheetVisible] = useState(false);
   const [previewExpanded, setPreviewExpanded] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
-  const patientAppointments = noteData.patient
-    ? getAppointmentsForPatient(noteData.patient.id)
-    : [];
+  // Fetch templates from Cliniko
+  const {
+    data: templates,
+    isLoading: isLoadingTemplates,
+    isError: isTemplatesError,
+    error: templatesError,
+    refetch: refetchTemplates,
+  } = useClinikoTemplatesFull();
 
-  const mostRecentAppointment = patientAppointments.length > 0 ? patientAppointments[0] : null;
+  // Fetch selected template details
+  const {
+    data: templateDetail,
+    isLoading: isLoadingTemplateDetail,
+  } = useClinikoTemplate(selectedTemplateId ?? undefined);
 
+  // Set template when detail is loaded
   useEffect(() => {
-    if (mostRecentAppointment && !noteData.appointment) {
-      setAppointment(mostRecentAppointment);
+    if (templateDetail) {
+      setTemplate(templateDetail);
+      setSelectedTemplateId(null); // Clear to prevent re-fetching
     }
-  }, [mostRecentAppointment, noteData.appointment, setAppointment]);
+  }, [templateDetail, setTemplate]);
 
   const handleContinue = () => {
     if (isSetupComplete) {
@@ -51,12 +65,33 @@ export default function NoteSetupScreen() {
     }
   };
 
-  const handleSelectTemplate = (template: Template) => {
+  const handleSelectTemplate = (template: ClinikoTreatmentNoteTemplate) => {
+    console.log('Selected template:', template.name);
+    // Set the template directly since we already have full details
     setTemplate(template);
     setTemplateSheetVisible(false);
   };
 
+  // Count voice-fillable questions for a template
+  const countVoiceFillable = (template: ClinikoTreatmentNoteTemplate) => {
+    let count = 0;
+    for (const section of template.content.sections) {
+      for (const question of section.questions) {
+        if (isVoiceFillable(question.type)) {
+          count++;
+        }
+      }
+    }
+    return count;
+  };
 
+  const countTotalQuestions = (template: ClinikoTreatmentNoteTemplate) => {
+    let count = 0;
+    for (const section of template.content.sections) {
+      count += section.questions.length;
+    }
+    return count;
+  };
 
   return (
     <View style={styles.container}>
@@ -89,20 +124,45 @@ export default function NoteSetupScreen() {
             style={styles.settingRow}
             onPress={() => setTemplateSheetVisible(true)}
             activeOpacity={0.7}
+            disabled={isLoadingTemplates}
           >
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Template</Text>
               <View style={styles.settingValueRow}>
-                <Text
-                  style={[
-                    styles.settingValue,
-                    !noteData.template && styles.settingPlaceholder,
-                  ]}
-                >
-                  {noteData.template?.name ?? 'Select template'}
-                </Text>
-                <ChevronRight size={18} color={colors.textSecondary} />
+                {isLoadingTemplates || isLoadingTemplateDetail ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <>
+                    <Text
+                      style={[
+                        styles.settingValue,
+                        !noteData.template && styles.settingPlaceholder,
+                      ]}
+                    >
+                      {noteData.template?.name ?? 'Select template'}
+                    </Text>
+                    <ChevronRight size={18} color={colors.textSecondary} />
+                  </>
+                )}
               </View>
+              {templateSummary && (
+                <View style={styles.templateSummaryRow}>
+                  <View style={styles.summaryBadge}>
+                    <Mic size={12} color={colors.success} />
+                    <Text style={styles.summaryBadgeText}>
+                      {templateSummary.voiceFillable} voice-fillable
+                    </Text>
+                  </View>
+                  {templateSummary.nonVoiceFillable > 0 && (
+                    <View style={[styles.summaryBadge, styles.summaryBadgeSecondary]}>
+                      <MicOff size={12} color={colors.textSecondary} />
+                      <Text style={styles.summaryBadgeTextSecondary}>
+                        {templateSummary.nonVoiceFillable} other
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
           </TouchableOpacity>
 
@@ -152,15 +212,55 @@ export default function NoteSetupScreen() {
               />
             </TouchableOpacity>
             {previewExpanded && (
-              <View style={styles.fieldsList}>
-                {noteData.template.fields.map((field, index) => (
-                  <View key={field.id} style={styles.fieldPreview}>
-                    <Text style={styles.fieldNumber}>{index + 1}</Text>
-                    <Text style={styles.fieldLabel}>{field.label}</Text>
+              <View style={styles.sectionsList}>
+                {noteData.template.content.sections.map((section, sectionIndex) => (
+                  <View key={`section-${sectionIndex}`} style={styles.sectionPreview}>
+                    <Text style={styles.sectionName}>{section.name}</Text>
+                    {section.description && (
+                      <Text style={styles.sectionDescription}>{section.description}</Text>
+                    )}
+                    <View style={styles.questionsList}>
+                      {section.questions.map((question, questionIndex) => {
+                        const voiceFillable = isVoiceFillable(question.type);
+                        return (
+                          <View key={`question-${sectionIndex}-${questionIndex}`} style={styles.questionPreview}>
+                            <View style={styles.questionHeader}>
+                              {voiceFillable ? (
+                                <Mic size={14} color={colors.success} />
+                              ) : (
+                                <MicOff size={14} color={colors.textSecondary} />
+                              )}
+                              <Text style={[
+                                styles.questionLabel,
+                                !voiceFillable && styles.questionLabelDisabled
+                              ]}>
+                                {question.name}
+                              </Text>
+                            </View>
+                            <Text style={styles.questionType}>
+                              {question.type}
+                              {!voiceFillable && ' (manual entry only)'}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
                   </View>
                 ))}
               </View>
             )}
+          </View>
+        )}
+
+        {isTemplatesError && (
+          <View style={styles.errorCard}>
+            <AlertCircle size={20} color={colors.error} />
+            <Text style={styles.errorText}>
+              Failed to load templates. {templatesError?.message || 'Please try again.'}
+            </Text>
+            <TouchableOpacity onPress={() => refetchTemplates()} style={styles.retryLink}>
+              <Text style={styles.retryLinkText}>Retry</Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -179,28 +279,63 @@ export default function NoteSetupScreen() {
       >
         <View style={styles.sheetContent}>
           <Text style={styles.sheetTitle}>Select Template</Text>
-          {templates.map(template => (
-            <TouchableOpacity
-              key={template.id}
-              style={styles.sheetOption}
-              onPress={() => handleSelectTemplate(template)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.sheetOptionContent}>
-                <Text style={styles.sheetOptionText}>{template.name}</Text>
-                <Text style={styles.sheetOptionSubtext}>
-                  {template.fields.length} fields
-                </Text>
-              </View>
-              {noteData.template?.id === template.id && (
-                <Check size={20} color={colors.primary} />
-              )}
-            </TouchableOpacity>
-          ))}
+          
+          {isLoadingTemplates ? (
+            <View style={styles.sheetLoading}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.sheetLoadingText}>Loading templates...</Text>
+            </View>
+          ) : isTemplatesError ? (
+            <View style={styles.sheetError}>
+              <AlertCircle size={32} color={colors.error} />
+              <Text style={styles.sheetErrorText}>Failed to load templates</Text>
+              <TouchableOpacity onPress={() => refetchTemplates()} style={styles.sheetRetryButton}>
+                <Text style={styles.sheetRetryText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : templates && templates.length > 0 ? (
+            <ScrollView style={styles.templatesList} showsVerticalScrollIndicator={false}>
+              {templates.map(template => {
+                const voiceFillableCount = countVoiceFillable(template);
+                const totalCount = countTotalQuestions(template);
+                
+                return (
+                  <TouchableOpacity
+                    key={template.id}
+                    style={styles.sheetOption}
+                    onPress={() => handleSelectTemplate(template)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.sheetOptionContent}>
+                      <Text style={styles.sheetOptionText}>{template.name}</Text>
+                      <View style={styles.sheetOptionMeta}>
+                        <Text style={styles.sheetOptionSubtext}>
+                          {template.content.sections.length} sections • {totalCount} fields
+                        </Text>
+                        <View style={styles.sheetOptionBadge}>
+                          <Mic size={10} color={colors.success} />
+                          <Text style={styles.sheetOptionBadgeText}>
+                            {voiceFillableCount} voice
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    {noteData.template?.id === template.id && (
+                      <Check size={20} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          ) : (
+            <View style={styles.sheetEmpty}>
+              <Text style={styles.sheetEmptyText}>
+                No templates found in your Cliniko account.
+              </Text>
+            </View>
+          )}
         </View>
       </BottomSheet>
-
-
     </View>
   );
 }
@@ -283,6 +418,34 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginTop: 4,
   },
+  templateSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  summaryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.success + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+  },
+  summaryBadgeSecondary: {
+    backgroundColor: colors.backgroundSecondary,
+  },
+  summaryBadgeText: {
+    fontSize: 12,
+    color: colors.success,
+    fontWeight: '500' as const,
+  },
+  summaryBadgeTextSecondary: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '500' as const,
+  },
   previewSection: {
     marginTop: spacing.md,
   },
@@ -302,31 +465,78 @@ const styles = StyleSheet.create({
   previewChevronExpanded: {
     transform: [{ rotate: '180deg' }],
   },
-  fieldsList: {
-    gap: spacing.sm,
+  sectionsList: {
     marginTop: spacing.sm,
-    paddingLeft: spacing.xs,
+    gap: spacing.md,
   },
-  fieldPreview: {
+  sectionPreview: {
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  sectionName: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: colors.primary,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  sectionDescription: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  questionsList: {
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  questionPreview: {
+    paddingVertical: spacing.xs,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.border,
+    paddingLeft: spacing.sm,
+  },
+  questionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+  },
+  questionLabel: {
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  questionLabelDisabled: {
+    color: colors.textSecondary,
+  },
+  questionType: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginLeft: 20,
+    marginTop: 2,
+  },
+  errorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.error + '10',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.md,
     gap: spacing.sm,
   },
-  fieldNumber: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.backgroundSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '600' as const,
-    overflow: 'hidden',
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.error,
   },
-  fieldLabel: {
-    fontSize: 15,
-    color: colors.textPrimary,
+  retryLink: {
+    padding: spacing.xs,
+  },
+  retryLinkText: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '500' as const,
   },
   bottomBar: {
     position: 'absolute',
@@ -348,6 +558,48 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.md,
   },
+  sheetLoading: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl * 2,
+  },
+  sheetLoadingText: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+  },
+  sheetError: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  sheetErrorText: {
+    fontSize: 15,
+    color: colors.error,
+    marginTop: spacing.sm,
+  },
+  sheetRetryButton: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.primary,
+    borderRadius: radius.sm,
+  },
+  sheetRetryText: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    fontWeight: '500' as const,
+  },
+  sheetEmpty: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  sheetEmptyText: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  templatesList: {
+    maxHeight: 400,
+  },
   sheetOption: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -363,9 +615,28 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: colors.textPrimary,
   },
+  sheetOptionMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: 4,
+  },
   sheetOptionSubtext: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginTop: 2,
+  },
+  sheetOptionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: colors.success + '15',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+  },
+  sheetOptionBadgeText: {
+    fontSize: 11,
+    color: colors.success,
+    fontWeight: '500' as const,
   },
 });
