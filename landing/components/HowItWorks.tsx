@@ -66,14 +66,14 @@ export function HowItWorks() {
       className="section bg-gradient-to-b from-slate-50 to-white relative overflow-hidden"
     >
       {/* Background decoration */}
-      <div className="absolute top-1/2 left-0 w-[500px] h-[500px] bg-gradient-to-r from-teal-100/30 to-transparent rounded-full blur-3xl -translate-y-1/2" />
+      <div className="absolute top-1/2 left-0 w-[500px] h-[500px] bg-gradient-to-r from-cyan-100/30 to-transparent rounded-full blur-3xl -translate-y-1/2" />
       
       <div className="container-wide relative">
         {/* Section header */}
         <div className="max-w-3xl mx-auto text-center mb-16 md:mb-20">
-          <div className="reveal inline-flex items-center gap-2 px-4 py-2 bg-teal-50 rounded-full mb-6">
-            <span className="text-teal-600 text-lg">✨</span>
-            <span className="text-sm font-semibold text-teal-700">Simple by design</span>
+          <div className="reveal inline-flex items-center gap-2 px-4 py-2 bg-cyan-50 rounded-full mb-6">
+            <span className="text-cyan-600 text-lg">✨</span>
+            <span className="text-sm font-semibold text-cyan-700">Simple by design</span>
           </div>
           
           <h2 className="reveal font-display text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 mb-6">
@@ -97,7 +97,7 @@ export function HowItWorks() {
                   onClick={() => setActiveStep(index)}
                   className={`reveal w-full text-left p-6 rounded-2xl transition-all duration-300 ${
                     activeStep === index
-                      ? 'bg-white shadow-lg border-2 border-teal-500'
+                      ? 'bg-white shadow-lg border-2 border-cyan-500'
                       : 'bg-transparent border-2 border-transparent hover:bg-white/50'
                   }`}
                   style={{ transitionDelay: `${index * 50}ms` }}
@@ -106,7 +106,7 @@ export function HowItWorks() {
                     {/* Step number */}
                     <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${
                       activeStep === index
-                        ? 'bg-gradient-to-br from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/30'
+                        ? 'bg-gradient-to-br from-cyan-500 to-cyan-400 text-white shadow-lg shadow-cyan-500/30'
                         : 'bg-slate-100 text-slate-400'
                     }`}>
                       {step.number}
@@ -128,7 +128,7 @@ export function HowItWorks() {
                     
                     {/* Active indicator */}
                     {activeStep === index && (
-                      <svg className="w-6 h-6 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-6 h-6 text-cyan-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     )}
@@ -160,8 +160,8 @@ export function HowItWorks() {
                         </div>
                         <p className="text-xs text-slate-400 mb-3 font-medium">TODAY'S APPOINTMENTS</p>
                         {['Sarah M.', 'James K.', 'Emma L.'].map((name, i) => (
-                          <div key={name} className={`flex items-center gap-3 p-3 rounded-xl mb-2 ${i === 0 ? 'bg-teal-50 border border-teal-200' : 'bg-slate-50'}`}>
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${i === 0 ? 'bg-teal-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                          <div key={name} className={`flex items-center gap-3 p-3 rounded-xl mb-2 ${i === 0 ? 'bg-cyan-50 border border-cyan-200' : 'bg-slate-50'}`}>
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${i === 0 ? 'bg-cyan-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
                               {name.split(' ').map(n => n[0]).join('')}
                             </div>
                             <div>
@@ -187,7 +187,7 @@ export function HowItWorks() {
                           <p className="text-sm text-slate-700 leading-relaxed">
                             Patient presents with improved mobility since last session.
                             <span className="text-slate-400"> Range of motion has increased notably in the affected area...</span>
-                            <span className="inline-block w-0.5 h-4 bg-teal-500 animate-pulse ml-0.5 align-middle" />
+                            <span className="inline-block w-0.5 h-4 bg-cyan-500 animate-pulse ml-0.5 align-middle" />
                           </p>
                         </div>
                         <div className="p-4 flex justify-center">
@@ -205,15 +205,15 @@ export function HowItWorks() {
                       </div>
                       <div className="p-4 space-y-4">
                         <div>
-                          <p className="text-xs text-teal-600 font-semibold mb-1">SUBJECTIVE</p>
+                          <p className="text-xs text-cyan-600 font-semibold mb-1">SUBJECTIVE</p>
                           <p className="text-sm text-slate-600">Patient reports improvement...</p>
                         </div>
                         <div>
-                          <p className="text-xs text-teal-600 font-semibold mb-1">OBJECTIVE</p>
+                          <p className="text-xs text-cyan-600 font-semibold mb-1">OBJECTIVE</p>
                           <p className="text-sm text-slate-600">ROM increased to 80°...</p>
                         </div>
                         <div>
-                          <p className="text-xs text-teal-600 font-semibold mb-1">ASSESSMENT</p>
+                          <p className="text-xs text-cyan-600 font-semibold mb-1">ASSESSMENT</p>
                           <p className="text-sm text-slate-600">Progressing well with treatment...</p>
                         </div>
                       </div>
@@ -222,7 +222,7 @@ export function HowItWorks() {
                     {/* Step 4: Complete */}
                     <div className={`absolute inset-0 pt-10 transition-opacity duration-500 ${activeStep === 3 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                       <div className="h-full flex flex-col items-center justify-center p-6">
-                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/30">
+                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center mb-4 shadow-lg shadow-cyan-500/30">
                           <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                           </svg>
@@ -247,7 +247,7 @@ export function HowItWorks() {
                     key={i}
                     onClick={() => setActiveStep(i)}
                     className={`h-1.5 rounded-full transition-all duration-300 ${
-                      activeStep === i ? 'w-8 bg-teal-500' : 'w-1.5 bg-slate-300'
+                      activeStep === i ? 'w-8 bg-cyan-500' : 'w-1.5 bg-slate-300'
                     }`}
                   />
                 ))}
@@ -269,7 +269,7 @@ export function HowItWorks() {
 
               {/* Arrow */}
               <div className="flex items-center justify-center">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-teal-500/30">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-cyan-500/30">
                   <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
@@ -286,7 +286,7 @@ export function HowItWorks() {
 
             <div className="mt-8 pt-8 border-t border-slate-100 text-center">
               <p className="text-lg text-slate-600">
-                That's <span className="font-bold text-teal-600">up to 10x faster</span>. 
+                That's <span className="font-bold text-cyan-600">up to 10x faster</span>. 
                 Save hours every week for what actually matters.
               </p>
             </div>

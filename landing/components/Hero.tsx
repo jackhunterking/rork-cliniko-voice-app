@@ -17,19 +17,19 @@ export function Hero({ onCtaClick }: HeroProps) {
   return (
     <section
       ref={heroRef}
-      className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-slate-50 via-white to-teal-50/30"
+      className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-slate-50 via-white to-cyan-50/30"
     >
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         {/* Large gradient orb */}
-        <div className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-gradient-to-br from-teal-200/40 to-emerald-100/30 rounded-full blur-3xl animate-float-slow" />
+        <div className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-gradient-to-br from-cyan-200/40 to-cyan-100/30 rounded-full blur-3xl animate-float-slow" />
         <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] bg-gradient-to-tr from-amber-100/30 to-orange-50/20 rounded-full blur-3xl animate-float" />
         
         {/* Subtle grid */}
         <div 
           className="absolute inset-0 opacity-[0.03]"
           style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, #0d9488 1px, transparent 0)`,
+            backgroundImage: `radial-gradient(circle at 1px 1px, #007fa3 1px, transparent 0)`,
             backgroundSize: '40px 40px',
           }}
         />
@@ -40,12 +40,12 @@ export function Hero({ onCtaClick }: HeroProps) {
           {/* Text Content */}
           <div className={`text-center lg:text-left transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             {/* Announcement badge */}
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-teal-500/10 to-emerald-500/10 border border-teal-200/50 rounded-full mb-8">
+            <div className="inline-flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-cyan-500/10 to-cyan-400/10 border border-cyan-200/50 rounded-full mb-8">
               <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-teal-500" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500" />
               </span>
-              <span className="text-sm font-semibold text-teal-700">
+              <span className="text-sm font-semibold text-cyan-700">
                 Now accepting early access requests
               </span>
             </div>
@@ -85,7 +85,7 @@ export function Hero({ onCtaClick }: HeroProps) {
                 </svg>
               </button>
               <a href="#how-it-works" className="btn-secondary">
-                <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -111,7 +111,7 @@ export function Hero({ onCtaClick }: HeroProps) {
           {/* Phone Mockup with App Preview */}
           <div className={`relative flex justify-center lg:justify-end transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             {/* Decorative elements */}
-            <div className="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gradient-to-br from-teal-400/20 to-emerald-300/10 rounded-full blur-3xl" />
+            <div className="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gradient-to-br from-cyan-400/20 to-cyan-300/10 rounded-full blur-3xl" />
             
             {/* Main phone */}
             <div className="relative">
@@ -143,9 +143,9 @@ export function Hero({ onCtaClick }: HeroProps) {
                     </div>
                     
                     {/* Patient badge */}
-                    <div className="mx-4 mt-3 px-4 py-2.5 bg-teal-50 rounded-xl border border-teal-100">
+                    <div className="mx-4 mt-3 px-4 py-2.5 bg-cyan-50 rounded-xl border border-cyan-100">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-white text-sm font-semibold">
+                        <div className="w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center text-white text-sm font-semibold">
                           SM
                         </div>
                         <div>
@@ -160,7 +160,7 @@ export function Hero({ onCtaClick }: HeroProps) {
                       <p className="text-sm text-slate-700 leading-relaxed">
                         Patient reports significant improvement in lower back pain since last session.
                         <span className="text-slate-400"> ROM has increased to 80% with minimal discomfort during extension...</span>
-                        <span className="inline-block w-0.5 h-4 bg-teal-500 animate-pulse ml-0.5 align-middle" />
+                        <span className="inline-block w-0.5 h-4 bg-cyan-500 animate-pulse ml-0.5 align-middle" />
                       </p>
                     </div>
                     
@@ -188,7 +188,7 @@ export function Hero({ onCtaClick }: HeroProps) {
                       <button className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse-glow">
                         <div className="w-6 h-6 bg-white rounded-sm" />
                       </button>
-                      <button className="w-12 h-12 rounded-full border-2 border-teal-500 flex items-center justify-center text-teal-500 hover:bg-teal-50 transition-colors">
+                      <button className="w-12 h-12 rounded-full border-2 border-cyan-500 flex items-center justify-center text-cyan-500 hover:bg-cyan-50 transition-colors">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
@@ -206,7 +206,7 @@ export function Hero({ onCtaClick }: HeroProps) {
               {/* Floating notification */}
               <div className="absolute -right-4 md:right-0 top-1/3 bg-white px-4 py-3 rounded-2xl shadow-xl border border-slate-100 animate-slide-in-left" style={{ animationDelay: '800ms' }}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-lg shadow-cyan-500/30">
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                     </svg>

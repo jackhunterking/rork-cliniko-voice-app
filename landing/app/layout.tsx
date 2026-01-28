@@ -3,10 +3,13 @@ import './globals.css';
 import { Analytics } from '@/components/Analytics';
 
 export const metadata: Metadata = {
-  title: 'Voice Notes for Clinicians | Document Faster, Finish Sooner',
+  title: 'Cliniko Voice | Voice-to-Notes App Built for Cliniko',
   description:
-    'Turn your voice into polished clinical notes in seconds. Stop typing after hours. Join the waitlist for early access.',
+    'The voice-to-notes app designed exclusively for Cliniko users. Speak your clinical notes, save directly to Cliniko treatment notes. Built by practitioners, for practitioners.',
   keywords: [
+    'Cliniko',
+    'Cliniko voice notes',
+    'Cliniko integration',
     'clinical documentation',
     'voice notes',
     'healthcare',
@@ -15,19 +18,22 @@ export const metadata: Metadata = {
     'clinician tools',
     'physiotherapy',
     'allied health',
+    'SOAP notes',
+    'Cliniko app',
+    'treatment notes',
   ],
-  authors: [{ name: 'Voice Notes' }],
+  authors: [{ name: 'Cliniko Voice' }],
   openGraph: {
-    title: 'Voice Notes for Clinicians',
-    description: 'Turn your voice into polished clinical notes in seconds.',
+    title: 'Cliniko Voice | Voice-to-Notes App Built for Cliniko',
+    description: 'The voice-to-notes app designed exclusively for Cliniko users. Speak your notes, save directly to Cliniko.',
     type: 'website',
     locale: 'en_AU',
-    siteName: 'Voice Notes',
+    siteName: 'Cliniko Voice',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Voice Notes for Clinicians',
-    description: 'Turn your voice into polished clinical notes in seconds.',
+    title: 'Cliniko Voice | Built for Cliniko Users',
+    description: 'Speak your clinical notes, save directly to Cliniko treatment notes.',
   },
   robots: {
     index: true,
@@ -39,7 +45,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  themeColor: '#007FA3',
+  themeColor: '#0d9488',
 };
 
 export default function RootLayout({
@@ -50,20 +56,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <head>
-        {/* Preconnect to font services */}
         <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="anonymous" />
-        {/* Satoshi Font */}
-        <link
-          href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap"
-          rel="stylesheet"
-        />
-        {/* Cabinet Grotesk for Display */}
-        <link
-          href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@700,800&display=swap"
-          rel="stylesheet"
-        />
       </head>
-      <body className="min-h-screen bg-surface antialiased">
+      <body className="min-h-screen antialiased">
         {children}
         <Analytics />
       </body>

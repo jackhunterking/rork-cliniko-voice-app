@@ -2,6 +2,35 @@
 
 import { useEffect, useRef } from 'react';
 
+const benefits = [
+  {
+    icon: '🎯',
+    title: 'Built for allied health',
+    description: 'Designed specifically for physios, chiros, osteos, and allied health practitioners. Not a generic dictation tool.',
+  },
+  {
+    icon: '📋',
+    title: 'Your templates, your format',
+    description: 'Uses your existing note structure. SOAP, DAP, or custom—it adapts to how you already work.',
+  },
+  {
+    icon: '⚡',
+    title: 'Real-time transcription',
+    description: 'See your words appear as you speak. Edit on the fly or review when you\'re done.',
+  },
+  {
+    icon: '🔄',
+    title: 'Seamless workflow',
+    description: 'Works alongside your practice management software. Copy, export, or save directly.',
+  },
+];
+
+const stats = [
+  { value: '10x', label: 'Faster than typing', color: 'text-cyan-500' },
+  { value: '47min', label: 'Saved per day avg.', color: 'text-cyan-400' },
+  { value: '98%', label: 'Transcription accuracy', color: 'text-cyan-500' },
+];
+
 export function VisualProof() {
   const sectionRef = useRef<HTMLDivElement>(null);
 
@@ -10,224 +39,127 @@ export function VisualProof() {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.add('animate-fade-in-up');
+            entry.target.classList.add('visible');
           }
         });
       },
-      { threshold: 0.1 }
+      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
     );
 
-    const elements = sectionRef.current?.querySelectorAll('.animate-on-scroll');
+    const elements = sectionRef.current?.querySelectorAll('.reveal, .reveal-scale');
     elements?.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
   }, []);
 
   return (
-    <section ref={sectionRef} className="section bg-surface-secondary overflow-hidden">
-      <div className="container-wide">
+    <section ref={sectionRef} className="section bg-slate-900 relative overflow-hidden">
+      {/* Background elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-bl from-cyan-500/10 to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-cyan-400/10 to-transparent rounded-full blur-3xl" />
+        <div 
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
+            backgroundSize: '32px 32px',
+          }}
+        />
+      </div>
+      
+      <div className="container-wide relative">
         {/* Section header */}
-        <div className="text-center mb-12 md:mb-16">
-          <h2 className="animate-on-scroll opacity-0 font-display text-display-sm md:text-display-md text-secondary mb-4">
-            See it in action
+        <div className="max-w-3xl mx-auto text-center mb-16 md:mb-20">
+          <div className="reveal inline-flex items-center gap-2 px-4 py-2 bg-cyan-500/10 border border-cyan-500/20 rounded-full mb-6">
+            <span className="text-cyan-400 text-lg">🏥</span>
+            <span className="text-sm font-semibold text-cyan-300">Purpose-built for clinical work</span>
+          </div>
+          
+          <h2 className="reveal font-display text-3xl sm:text-4xl md:text-5xl font-black text-white mb-6">
+            More than just dictation
           </h2>
-          <p className="animate-on-scroll opacity-0 animate-delay-100 text-lg text-secondary-light max-w-2xl mx-auto">
-            A seamless mobile experience designed for the realities of clinical practice.
+          
+          <p className="reveal text-lg md:text-xl text-slate-400 leading-relaxed">
+            We didn't build another voice-to-text tool. We built a clinical documentation 
+            system that understands how practitioners actually work.
           </p>
         </div>
 
-        {/* Mockup display */}
-        <div className="relative flex justify-center items-end gap-4 md:gap-8">
-          {/* Left phone - smaller, angled */}
-          <div className="animate-on-scroll opacity-0 animate-delay-100 hidden sm:block">
-            <div className="relative w-[200px] md:w-[240px] -rotate-6 transform-gpu">
-              <div className="bg-secondary rounded-[2.5rem] p-2 shadow-elevated">
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-full z-10" />
-                <div className="bg-surface rounded-[2rem] overflow-hidden aspect-[9/19.5]">
-                  {/* Patient list screen mockup */}
-                  <div className="absolute inset-0 flex flex-col p-3">
-                    <div className="h-8" />
-                    <div className="px-2 py-2">
-                      <div className="h-3 w-20 bg-secondary/10 rounded mb-1" />
-                      <div className="h-2 w-24 bg-secondary/5 rounded" />
-                    </div>
-                    {/* Patient cards */}
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="mt-2 bg-surface-secondary rounded-xl p-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-primary-light" />
-                          <div className="flex-1">
-                            <div className="h-2 bg-secondary/10 rounded w-3/4 mb-1" />
-                            <div className="h-1.5 bg-secondary/5 rounded w-1/2" />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+        {/* Stats bar */}
+        <div className="reveal flex flex-wrap justify-center gap-8 md:gap-16 mb-16 md:mb-20">
+          {stats.map((stat) => (
+            <div key={stat.label} className="text-center">
+              <div className={`text-4xl md:text-5xl font-black ${stat.color} mb-1`}>
+                {stat.value}
               </div>
-              {/* Label */}
-              <div className="text-center mt-4">
-                <p className="text-sm font-medium text-secondary">Patient List</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Center phone - main, larger */}
-          <div className="animate-on-scroll opacity-0 animate-delay-200 z-10">
-            <div className="relative w-[280px] md:w-[320px]">
-              {/* Glow effect */}
-              <div className="absolute -inset-8 bg-gradient-to-t from-primary/20 to-transparent rounded-full blur-3xl opacity-50" />
-              
-              <div className="relative bg-secondary rounded-[3rem] p-3 shadow-elevated">
-                <div className="absolute top-5 left-1/2 -translate-x-1/2 w-28 h-7 bg-black rounded-full z-10" />
-                <div className="bg-surface rounded-[2.5rem] overflow-hidden aspect-[9/19.5]">
-                  {/* Live recording screen mockup */}
-                  <div className="absolute inset-0 flex flex-col">
-                    <div className="h-12" />
-                    <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <svg className="w-5 h-5 text-secondary-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </div>
-                      <div className="text-center">
-                        <h3 className="text-sm font-semibold text-secondary">New Note</h3>
-                        <p className="text-2xs text-red-500 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                          Recording
-                        </p>
-                      </div>
-                      <div className="w-5" />
-                    </div>
-                    
-                    {/* Patient badge */}
-                    <div className="px-4 py-2 bg-primary-light/50 flex items-center gap-2">
-                      <span className="text-xs text-secondary-light">Recording for</span>
-                      <span className="text-xs font-medium text-primary">Sarah Mitchell</span>
-                    </div>
-                    
-                    {/* Transcript area */}
-                    <div className="flex-1 p-4">
-                      <p className="text-sm text-secondary leading-relaxed">
-                        Patient presents with lower back pain radiating to the left leg. 
-                        <span className="text-secondary-light"> Pain started three weeks ago after lifting...</span>
-                        <span className="inline-block w-0.5 h-4 bg-primary animate-pulse ml-0.5" />
-                      </p>
-                    </div>
-                    
-                    {/* Waveform visualization */}
-                    <div className="px-6 py-4 flex items-center justify-center gap-1">
-                      {[...Array(24)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-1 bg-primary rounded-full"
-                          style={{
-                            height: `${Math.random() * 24 + 8}px`,
-                            opacity: 0.3 + Math.random() * 0.7,
-                          }}
-                        />
-                      ))}
-                    </div>
-                    
-                    {/* Recording controls */}
-                    <div className="p-4 flex items-center justify-center gap-6">
-                      <div className="w-12 h-12 rounded-full border-2 border-secondary/20 flex items-center justify-center">
-                        <svg className="w-5 h-5 text-secondary-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </div>
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
-                        <div className="w-6 h-6 bg-white rounded-sm" />
-                      </div>
-                      <div className="w-12 h-12 rounded-full border-2 border-primary flex items-center justify-center">
-                        <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    </div>
-                    
-                    <div className="h-8 flex justify-center items-center">
-                      <div className="w-32 h-1 bg-secondary/20 rounded-full" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Label */}
-              <div className="text-center mt-4">
-                <p className="text-sm font-medium text-secondary">Live Recording</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Right phone - smaller, angled */}
-          <div className="animate-on-scroll opacity-0 animate-delay-300 hidden sm:block">
-            <div className="relative w-[200px] md:w-[240px] rotate-6 transform-gpu">
-              <div className="bg-secondary rounded-[2.5rem] p-2 shadow-elevated">
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-full z-10" />
-                <div className="bg-surface rounded-[2rem] overflow-hidden aspect-[9/19.5]">
-                  {/* Note editor screen mockup */}
-                  <div className="absolute inset-0 flex flex-col p-3">
-                    <div className="h-8" />
-                    <div className="px-2 py-2 border-b border-border/50">
-                      <div className="flex items-center justify-between">
-                        <div className="h-2 w-16 bg-secondary/10 rounded" />
-                        <div className="px-2 py-0.5 bg-accent-mint/10 rounded">
-                          <span className="text-2xs text-accent-mint font-medium">Ready</span>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Note fields */}
-                    <div className="p-2 space-y-3">
-                      <div>
-                        <div className="h-1.5 w-16 bg-primary/20 rounded mb-1" />
-                        <div className="h-2 w-full bg-secondary/10 rounded mb-0.5" />
-                        <div className="h-2 w-4/5 bg-secondary/10 rounded" />
-                      </div>
-                      <div>
-                        <div className="h-1.5 w-20 bg-primary/20 rounded mb-1" />
-                        <div className="h-2 w-full bg-secondary/10 rounded mb-0.5" />
-                        <div className="h-2 w-3/4 bg-secondary/10 rounded" />
-                      </div>
-                      <div>
-                        <div className="h-1.5 w-12 bg-primary/20 rounded mb-1" />
-                        <div className="h-2 w-full bg-secondary/10 rounded" />
-                      </div>
-                    </div>
-                    {/* Save button */}
-                    <div className="mt-auto p-3">
-                      <div className="h-8 bg-primary rounded-lg flex items-center justify-center">
-                        <span className="text-2xs text-white font-medium">Save Note</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Label */}
-              <div className="text-center mt-4">
-                <p className="text-sm font-medium text-secondary">Formatted Note</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Feature highlights */}
-        <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
-          {[
-            { icon: '🎤', label: 'Voice Input', desc: 'Speak naturally' },
-            { icon: '⚡', label: 'Real-time', desc: 'Instant transcription' },
-            { icon: '✨', label: 'Smart Format', desc: 'Auto-structured notes' },
-            { icon: '📋', label: 'Templates', desc: "Your clinic's format" },
-          ].map((feature, i) => (
-            <div
-              key={feature.label}
-              className={`animate-on-scroll opacity-0 animate-delay-${(i + 1) * 100} text-center p-4`}
-            >
-              <div className="text-3xl mb-2">{feature.icon}</div>
-              <p className="font-medium text-secondary">{feature.label}</p>
-              <p className="text-sm text-secondary-light">{feature.desc}</p>
+              <div className="text-sm text-slate-400 font-medium">{stat.label}</div>
             </div>
           ))}
+        </div>
+
+        {/* Benefits grid */}
+        <div className="grid md:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto mb-16">
+          {benefits.map((benefit, index) => (
+            <div
+              key={benefit.title}
+              className="reveal-scale"
+              style={{ transitionDelay: `${index * 100}ms` }}
+            >
+              <div className="group p-6 md:p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 hover:border-white/20 transition-all duration-300">
+                <div className="flex items-start gap-4">
+                  <span className="text-3xl">{benefit.icon}</span>
+                  <div>
+                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
+                      {benefit.title}
+                    </h3>
+                    <p className="text-slate-400 leading-relaxed">
+                      {benefit.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Journey preview placeholder */}
+        <div className="reveal">
+          <div className="relative max-w-5xl mx-auto">
+            <div className="text-center mb-8">
+              <p className="text-sm font-medium text-cyan-400 mb-2">THE CLINICIAN JOURNEY</p>
+              <h3 className="text-2xl font-bold text-white">See how it fits your day</h3>
+            </div>
+            
+            {/* Mockup placeholder for journey screens */}
+            <div className="bg-gradient-to-b from-slate-800 to-slate-900 rounded-3xl border border-slate-700/50 p-8 md:p-12">
+              <div className="grid md:grid-cols-3 gap-8 text-center">
+                {[
+                  { time: 'Morning', title: 'Quick setup', desc: 'Open app, select patient from today\'s schedule' },
+                  { time: 'During session', title: 'Hands-free notes', desc: 'Speak while treating, review between patients' },
+                  { time: 'End of day', title: 'All done', desc: 'No backlog. Head home on time.' },
+                ].map((item, i) => (
+                  <div key={item.time} className="relative">
+                    <div className="text-xs font-semibold text-cyan-400 mb-3">{item.time.toUpperCase()}</div>
+                    {/* Placeholder for mockup image */}
+                    <div className="aspect-[9/16] bg-slate-800 rounded-2xl border border-slate-700 mb-4 flex items-center justify-center group hover:border-cyan-500/50 transition-colors">
+                      <div className="text-center p-4">
+                        <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center mx-auto mb-3">
+                          <span className="text-2xl">{['📱', '🎤', '✅'][i]}</span>
+                        </div>
+                        <p className="text-sm text-slate-500">App mockup placeholder</p>
+                      </div>
+                    </div>
+                    <h4 className="text-lg font-semibold text-white mb-1">{item.title}</h4>
+                    <p className="text-sm text-slate-400">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+              
+              <p className="text-center text-sm text-slate-500 mt-8">
+                🖼️ Full journey mockups coming soon — you'll be able to see every screen in detail
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </section>

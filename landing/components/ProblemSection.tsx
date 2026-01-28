@@ -128,8 +128,8 @@ export function ProblemSection() {
                   />
                   <defs>
                     <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#0d9488" />
-                      <stop offset="100%" stopColor="#10b981" />
+                      <stop offset="0%" stopColor="#007fa3" />
+                      <stop offset="100%" stopColor="#1ecbf5" />
                     </linearGradient>
                   </defs>
                 </svg>
