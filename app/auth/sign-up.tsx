@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   TextInput,
   KeyboardAvoidingView,
@@ -11,8 +10,8 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { ChevronLeft, Mail, CheckCircle } from "lucide-react-native";
+import { useRouter, Stack } from "expo-router";
+import { Mail, CheckCircle } from "lucide-react-native";
 import { colors, spacing, radius } from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
@@ -92,15 +91,8 @@ export default function SignUpScreen() {
   // Success screen - magic link sent
   if (screenState === "sent") {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => setScreenState("email")} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Check your email</Text>
-          <View style={styles.placeholder} />
-        </View>
-
+      <View style={styles.container}>
+        <Stack.Screen options={{ headerTitle: "Check your email" }} />
         <View style={styles.successContent}>
           <View style={styles.successIconContainer}>
             <CheckCircle size={48} color={colors.primary} />
@@ -170,21 +162,13 @@ export default function SignUpScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   // Email entry screen
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Create account</Text>
-        <View style={styles.placeholder} />
-      </View>
-
+    <View style={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -261,7 +245,7 @@ export default function SignUpScreen() {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -269,27 +253,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: "600" as const,
-    color: colors.textPrimary,
-  },
-  placeholder: {
-    width: 32,
   },
   keyboardView: {
     flex: 1,

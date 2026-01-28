@@ -174,12 +174,13 @@ export async function clinikoFetch<T>(
       : `Request failed with status ${response.status}`;
 
     const errors = typeof data === 'object' && data !== null && 'errors' in data
-      ? (data as { errors: Record<string, string[]> }).errors
+      ? (data as { errors: Record<string, string | string[]> }).errors
       : undefined;
 
     errorCliniko(
       `${method} ${endpoint} - ${response.status} ${response.statusText} (${formatDuration(duration)})`,
-      errorMessage
+      errorMessage,
+      errors ? `Validation errors: ${JSON.stringify(errors)}` : undefined
     );
     
     recordClinikoApiCall({

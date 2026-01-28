@@ -7,9 +7,8 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  Switch,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   User,
@@ -19,14 +18,11 @@ import {
   ChevronRight,
   Lightbulb,
   Trash2,
-  ShieldCheck,
-  Info,
   RefreshCw,
   Bug,
 } from 'lucide-react-native';
 import { colors, spacing, radius } from '@/constants/colors';
 import { useAuth } from '@/context/AuthContext';
-import { useSettingsStore } from '@/stores/settings-store';
 import { useClinikoUser, useClinikoCache } from '@/hooks/useCliniko';
 
 interface MenuItemProps {
@@ -86,7 +82,6 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { user, signOut, hasClinikoKey } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const { medicalModeEnabled, toggleMedicalMode } = useSettingsStore();
   
   // Fetch Cliniko user info
   const { 
@@ -113,25 +108,6 @@ export default function SettingsScreen() {
   // Determine which name/email to show in profile card
   const displayName = clinikoDisplayName || supabaseDisplayName;
   const displayEmail = clinikoDisplayEmail || supabaseDisplayEmail;
-
-  // Handle medical mode toggle with confirmation
-  const handleMedicalModeToggle = () => {
-    if (!medicalModeEnabled) {
-      Alert.alert(
-        'Enable Medical Mode',
-        'Medical mode enables PII (Personal Identifiable Information) redaction in transcriptions.\n\nOnly enable this if you have the correct compliance agreements in place for handling medical data.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Enable',
-            onPress: toggleMedicalMode,
-          },
-        ]
-      );
-    } else {
-      toggleMedicalMode();
-    }
-  };
 
   const handleRefreshClinikoData = async () => {
     if (!hasClinikoKey) return;
@@ -175,15 +151,6 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: 'Settings',
-          headerLargeTitle: true,
-          headerShadowVisible: false,
-          headerStyle: { backgroundColor: colors.background },
-        }}
-      />
-      
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
@@ -259,35 +226,6 @@ export default function SettingsScreen() {
               </>
             )}
           </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Transcription</Text>
-          <View style={styles.menuCard}>
-            <View style={styles.toggleMenuItem}>
-              <View style={styles.menuItemLeft}>
-                <ShieldCheck size={20} color={medicalModeEnabled ? colors.success : colors.textSecondary} />
-                <View style={styles.menuItemTextContainer}>
-                  <Text style={styles.menuItemLabel}>Medical Mode</Text>
-                  <View style={styles.subtitleRow}>
-                    <Info size={12} color={colors.textSecondary} style={styles.infoIcon} />
-                    <Text style={styles.menuItemSubtitle}>
-                      PII redaction for compliance
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              <Switch
-                value={medicalModeEnabled}
-                onValueChange={handleMedicalModeToggle}
-                trackColor={{ false: colors.border, true: colors.success }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-          </View>
-          <Text style={styles.sectionFootnote}>
-            Enable only if you have compliance agreements in place.
-          </Text>
         </View>
 
         <View style={styles.section}>
@@ -463,23 +401,6 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.border,
     marginLeft: spacing.md + 20 + spacing.sm + 4,
-  },
-  toggleMenuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: spacing.md,
-  },
-  infoIcon: {
-    marginRight: 4,
-  },
-  sectionFootnote: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.xs,
-    fontStyle: 'italic',
   },
   version: {
     fontSize: 13,

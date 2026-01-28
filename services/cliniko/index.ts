@@ -43,5 +43,9 @@ export {
   listIndividualAppointments,
   getPatientAppointments,
   getTodayAppointments,
+  getAppointmentsInRange,
   type ListAppointmentsOptions,
+  // Appointment Types
+  getAppointmentType,
+  extractAppointmentTypeIdFromLink,
 } from './clinikoEndpoints';

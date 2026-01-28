@@ -1,14 +1,16 @@
 /**
  * useRecordingSession Hook
- * Orchestrates audio recording and AssemblyAI streaming
+ * Orchestrates real-time audio streaming and AssemblyAI transcription
  * Manages state machine for recording flow
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { Platform, PermissionsAndroid } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import { RecordingState, TranscriptState } from '@/types/streaming';
 import { assemblyaiStreaming } from '@/services/assemblyai-streaming';
-import { audioRecording } from '@/services/audio-recording';
+import { liveAudioStream } from '@/services/live-audio-stream';
 import { supabase } from '@/lib/supabase';
 import { useSettingsStore } from '@/stores/settings-store';
 
@@ -36,18 +38,16 @@ interface UseRecordingSessionReturn {
   combinedText: string;
   /** Error message if any */
   error: string | null;
-  /** Audio file URI after recording stops */
-  audioUri: string | null;
   /** Start recording */
   startRecording: () => Promise<void>;
   /** Stop recording */
   stopRecording: () => Promise<void>;
   /** Cancel recording */
   cancelRecording: () => Promise<void>;
-  /** Finalize transcript with Slam-1 */
-  finalizeTranscript: () => Promise<string | null>;
   /** Reset session */
   resetSession: () => void;
+  /** Prepare for recording (preconnect to AssemblyAI) - call this early for instant start */
+  prepareRecording: () => Promise<void>;
 }
 
 export function useRecordingSession(
@@ -63,10 +63,10 @@ export function useRecordingSession(
   const [finalText, setFinalText] = useState('');
   const [partialText, setPartialText] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [audioUri, setAudioUri] = useState<string | null>(null);
 
   // Refs for cleanup
   const isCleaningUp = useRef(false);
+  const permissionsGranted = useRef(false);
 
   // Update state and notify
   const updateState = useCallback(
@@ -77,9 +77,44 @@ export function useRecordingSession(
     [onStateChange]
   );
 
-  // Setup streaming callbacks
+  // Request microphone permissions
+  const requestPermissions = useCallback(async (): Promise<boolean> => {
+    if (permissionsGranted.current) {
+      return true;
+    }
+
+    if (__DEV__) console.log('[Recording] Requesting permissions...');
+
+    try {
+      if (Platform.OS === 'ios') {
+        const { status } = await Audio.requestPermissionsAsync();
+        permissionsGranted.current = status === 'granted';
+      } else {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          {
+            title: 'Microphone Permission',
+            message: 'Cliniko Voice needs access to your microphone to transcribe your notes.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        permissionsGranted.current = granted === PermissionsAndroid.RESULTS.GRANTED;
+      }
+
+      if (__DEV__) console.log('[Recording] Permission granted:', permissionsGranted.current);
+      return permissionsGranted.current;
+    } catch (err) {
+      console.error('[Recording] Permission request failed:', err);
+      return false;
+    }
+  }, []);
+
+  // Setup AssemblyAI streaming callbacks
   useEffect(() => {
     assemblyaiStreaming.onPartialText(({ text }) => {
+      if (__DEV__) console.log('[Recording] Partial text:', text.substring(0, 50) + '...');
       setPartialText(text);
       if (recordingState === 'listening') {
         updateState('recognizing');
@@ -87,7 +122,10 @@ export function useRecordingSession(
     });
 
     assemblyaiStreaming.onFinalText(({ text }) => {
-      setFinalText((prev) => (prev ? `${prev} ${text}` : text));
+      if (__DEV__) console.log('[Recording] Final text:', text);
+      if (text) {
+        setFinalText((prev) => (prev ? `${prev} ${text}` : text));
+      }
       setPartialText('');
     });
 
@@ -98,8 +136,12 @@ export function useRecordingSession(
       updateState('error');
     });
 
-    assemblyaiStreaming.onSessionEnd(() => {
-      if (__DEV__) console.log('[Recording] Session ended');
+    assemblyaiStreaming.onSessionStart((sessionId) => {
+      if (__DEV__) console.log('[Recording] Session started:', sessionId);
+    });
+
+    assemblyaiStreaming.onSessionEnd((duration) => {
+      if (__DEV__) console.log('[Recording] Session ended, duration:', duration);
     });
 
     return () => {
@@ -107,18 +149,31 @@ export function useRecordingSession(
     };
   }, [onError, recordingState, updateState]);
 
-  // Setup audio metering callback
+  // Setup live audio stream callbacks
   useEffect(() => {
-    audioRecording.onMetering((data) => {
-      setAmplitude(data.amplitude);
+    // Wire audio data to AssemblyAI
+    liveAudioStream.onAudioData((base64Audio) => {
+      assemblyaiStreaming.sendAudioChunk(base64Audio);
+    });
+
+    // Wire metering for amplitude visualization
+    liveAudioStream.onMetering((amp, db) => {
+      setAmplitude(amp);
+    });
+
+    // Handle audio errors
+    liveAudioStream.onError((errorMsg) => {
+      console.error('[Recording] Audio stream error:', errorMsg);
+      setError(errorMsg);
+      onError?.(errorMsg);
     });
 
     return () => {
-      audioRecording.removeAllCallbacks();
+      liveAudioStream.removeAllCallbacks();
     };
-  }, []);
+  }, [onError]);
 
-  // Start recording
+  // Start recording - optimized for instant start when preconnected
   const startRecording = useCallback(async () => {
     if (isRecording || isCleaningUp.current) {
       return;
@@ -126,31 +181,44 @@ export function useRecordingSession(
 
     if (__DEV__) console.log('[Recording] Starting...');
     setError(null);
+    setFinalText('');
+    setPartialText('');
 
     try {
-      // Haptic feedback
+      // Haptic feedback immediately
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      // Request permissions
-      const hasPermission = await audioRecording.requestPermissions();
+      // Request permissions (should already be granted from preconnect)
+      const hasPermission = await requestPermissions();
       if (!hasPermission) {
         throw new Error('Microphone permission denied');
       }
 
-      // Start audio recording
-      await audioRecording.startRecording({ usePCM: true });
-      setIsRecording(true);
+      // Set state immediately so UI responds
       updateState('listening');
+      setIsRecording(true);
 
-      // Connect to AssemblyAI streaming
-      // Note: In a production app, you'd stream audio chunks in real-time
-      // For now, we'll do the full transcript on stop
-      try {
+      // Initialize live audio stream (fast, usually already done)
+      await liveAudioStream.initialize();
+
+      // Check if already preconnected
+      const wasPreconnected = assemblyaiStreaming.isPreconnected();
+      
+      if (wasPreconnected) {
+        // Best case: preconnect worked, we can start immediately
+        if (__DEV__) console.log('[Recording] AssemblyAI already connected (preconnect worked)');
+      } else {
+        // Need to connect first - enable buffering so we don't lose audio
+        if (__DEV__) console.log('[Recording] Connecting to AssemblyAI...');
+        assemblyaiStreaming.enableBuffering();
         await assemblyaiStreaming.connect();
-      } catch (streamError) {
-        // Continue with local recording even if streaming fails
-        console.warn('[Recording] Streaming connection failed, continuing with local recording');
+        if (__DEV__) console.log('[Recording] AssemblyAI connected');
       }
+
+      // Start audio capture
+      if (__DEV__) console.log('[Recording] Starting audio stream...');
+      await liveAudioStream.start();
+      if (__DEV__) console.log('[Recording] Audio stream started');
 
       if (__DEV__) console.log('[Recording] Started successfully');
     } catch (err) {
@@ -161,12 +229,13 @@ export function useRecordingSession(
       updateState('error');
       
       // Cleanup on error
-      await audioRecording.cancelRecording();
+      await liveAudioStream.stop();
+      await assemblyaiStreaming.disconnect();
       setIsRecording(false);
     }
-  }, [isRecording, onError, updateState]);
+  }, [isRecording, onError, requestPermissions, updateState]);
 
-  // Stop recording
+  // Stop recording - optimized for faster completion
   const stopRecording = useCallback(async () => {
     if (!isRecording || isCleaningUp.current) {
       return;
@@ -182,25 +251,36 @@ export function useRecordingSession(
       setIsRecording(false);
       updateState('processing');
 
+      // Stop audio streaming immediately
+      await liveAudioStream.stop();
+
+      // Small delay to ensure final audio chunk is processed (reduced from 500ms)
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Disconnect from streaming
       await assemblyaiStreaming.disconnect();
 
-      // Stop audio recording and get file URI
-      const uri = await audioRecording.stopRecording();
-      setAudioUri(uri);
-
-      if (__DEV__) console.log('[Recording] Stopped, audio URI:', uri);
-
       // Get final transcript from streaming
       const transcript = assemblyaiStreaming.getTranscript();
+      const stats = assemblyaiStreaming.getStats();
+      
+      if (__DEV__) {
+        console.log('[Recording] Stopped');
+        console.log('[Recording] Final transcript:', transcript.finalText);
+        console.log('[Recording] Chunks sent:', stats.chunksSent);
+      }
+
       setFinalText(transcript.finalText);
       setPartialText('');
 
       // If we have any transcript, mark as done
-      // Otherwise, we'll need to run async transcription
       if (transcript.finalText) {
         updateState('done');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        // No transcript received - might be an issue
+        if (__DEV__) console.warn('[Recording] No transcript received');
+        updateState('done');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to stop recording';
@@ -225,19 +305,18 @@ export function useRecordingSession(
       // Haptic feedback
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
+      // Stop audio streaming
+      await liveAudioStream.stop();
+
       // Disconnect streaming
       await assemblyaiStreaming.disconnect();
       assemblyaiStreaming.resetTranscript();
-
-      // Cancel audio recording
-      await audioRecording.cancelRecording();
 
       // Reset state
       setIsRecording(false);
       setFinalText('');
       setPartialText('');
       setAmplitude(0);
-      setAudioUri(null);
       setError(null);
       updateState('idle');
 
@@ -249,79 +328,6 @@ export function useRecordingSession(
     }
   }, [updateState]);
 
-  // Finalize transcript with Slam-1
-  const finalizeTranscript = useCallback(async (): Promise<string | null> => {
-    if (!audioUri) {
-      console.warn('[Recording] No audio URI to finalize');
-      return null;
-    }
-
-    if (__DEV__) console.log('[Recording] Finalizing transcript...');
-    updateState('processing');
-
-    try {
-      // Read audio file as base64
-      const audioBase64 = await audioRecording.getAudioAsBase64(audioUri);
-
-      // Upload to Supabase Storage
-      const fileName = `recording_${Date.now()}.m4a`;
-      const filePath = `recordings/${fileName}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('recordings')
-        .upload(filePath, decode(audioBase64), {
-          contentType: 'audio/m4a',
-          upsert: false,
-        });
-
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`);
-      }
-
-      // Get signed URL for the uploaded file
-      const { data: urlData } = await supabase.storage
-        .from('recordings')
-        .createSignedUrl(filePath, 3600); // 1 hour expiry
-
-      if (!urlData?.signedUrl) {
-        throw new Error('Failed to get signed URL');
-      }
-
-      // Call finalize Edge Function
-      const { data, error: fnError } = await supabase.functions.invoke(
-        'assemblyai-finalize',
-        {
-          body: {
-            audioUrl: urlData.signedUrl,
-            streamingTranscript: finalText,
-            medicalMode: medicalModeEnabled,
-          },
-        }
-      );
-
-      if (fnError) {
-        throw new Error(`Finalize failed: ${fnError.message}`);
-      }
-
-      const finalizedText = data?.finalText || finalText;
-      setFinalText(finalizedText);
-      updateState('done');
-
-      // Haptic feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      onTranscriptFinalized?.(finalizedText);
-      return finalizedText;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to finalize';
-      console.error('[Recording] Finalize error:', err);
-      setError(errorMessage);
-      onError?.(errorMessage);
-      updateState('error');
-      return null;
-    }
-  }, [audioUri, finalText, medicalModeEnabled, onError, onTranscriptFinalized, updateState]);
-
   // Reset session
   const resetSession = useCallback(() => {
     assemblyaiStreaming.resetTranscript();
@@ -332,14 +338,38 @@ export function useRecordingSession(
     setFinalText('');
     setPartialText('');
     setError(null);
-    setAudioUri(null);
   }, []);
+
+  // Prepare for recording - preconnect to AssemblyAI and request permissions
+  // Call this when the recording UI opens for instant recording start
+  const prepareRecording = useCallback(async () => {
+    if (__DEV__) console.log('[Recording] Preparing (preconnecting)...');
+    
+    try {
+      // Request permissions early (won't show dialog if already granted)
+      const hasPermission = await requestPermissions();
+      if (!hasPermission) {
+        if (__DEV__) console.warn('[Recording] Permission not granted during prepare');
+      }
+
+      // Initialize live audio stream early
+      await liveAudioStream.initialize();
+
+      // Preconnect to AssemblyAI (fetches token + establishes WebSocket)
+      await assemblyaiStreaming.preconnect();
+
+      if (__DEV__) console.log('[Recording] Preparation complete');
+    } catch (err) {
+      // Don't fail - this is just preparation
+      console.error('[Recording] Preparation error (non-fatal):', err);
+    }
+  }, [requestPermissions]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (isRecording) {
-        audioRecording.cancelRecording();
+        liveAudioStream.stop();
         assemblyaiStreaming.disconnect();
       }
     };
@@ -358,21 +388,10 @@ export function useRecordingSession(
     partialText,
     combinedText,
     error,
-    audioUri,
     startRecording,
     stopRecording,
     cancelRecording,
-    finalizeTranscript,
     resetSession,
+    prepareRecording,
   };
-}
-
-// Helper to decode base64 to Uint8Array
-function decode(base64: string): Uint8Array {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
 }

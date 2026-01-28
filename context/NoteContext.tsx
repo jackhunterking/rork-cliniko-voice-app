@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
 import {
   ClinikoTreatmentNoteTemplate,
+  ClinikoTreatmentNote,
   ClinikoIndividualAppointment,
   AppNoteField,
   flattenTemplateToFields,
@@ -43,8 +44,10 @@ export interface NoteData {
   template: ClinikoTreatmentNoteTemplate | null;
   appointment: Appointment | null;
   clinikoAppointment: ClinikoIndividualAppointment | null;
-  copyPreviousNote: boolean;
+  appointmentTypeName: string | null;
   fieldValues: NoteFieldValue[];
+  /** If set, we are editing an existing note rather than creating a new one */
+  editingNoteId: string | null;
 }
 
 const initialNoteData: NoteData = {
@@ -52,15 +55,15 @@ const initialNoteData: NoteData = {
   template: null,
   appointment: null,
   clinikoAppointment: null,
-  copyPreviousNote: false,
+  appointmentTypeName: null,
   fieldValues: [],
+  editingNoteId: null,
 };
 
 export const [NoteProvider, useNote] = createContextHook(() => {
   const [noteData, setNoteData] = useState<NoteData>(initialNoteData);
 
   const setPatient = useCallback((patient: Patient) => {
-    console.log('Setting patient:', patient.name);
     setNoteData(prev => ({ ...prev, patient }));
   }, []);
 
@@ -68,8 +71,6 @@ export const [NoteProvider, useNote] = createContextHook(() => {
    * Set the Cliniko template and generate field values from its structure
    */
   const setTemplate = useCallback((template: ClinikoTreatmentNoteTemplate) => {
-    console.log('Setting template:', template.name);
-    
     // Flatten template structure to field values
     const appFields = flattenTemplateToFields(template);
     
@@ -85,19 +86,73 @@ export const [NoteProvider, useNote] = createContextHook(() => {
     setNoteData(prev => ({ ...prev, template, fieldValues }));
   }, []);
 
+  /**
+   * Load an existing treatment note for editing.
+   * Pre-populates field values from the note's content.
+   */
+  const loadExistingNote = useCallback((
+    note: ClinikoTreatmentNote,
+    template: ClinikoTreatmentNoteTemplate,
+    patient: Patient
+  ) => {
+    // Flatten template structure to get the field definitions
+    const appFields = flattenTemplateToFields(template);
+    
+    // Create field values and populate them from the note's content
+    const fieldValues: NoteFieldValue[] = appFields.map(field => {
+      // Try to find the matching answer in the note's content
+      let existingValue = '';
+      
+      const sections = note.content?.sections;
+      if (sections && Array.isArray(sections)) {
+        const section = sections[field.sectionIndex];
+        if (section && section.questions && Array.isArray(section.questions)) {
+          const question = section.questions[field.questionIndex];
+          if (question && typeof question === 'object') {
+            // Question can have 'answer' property
+            existingValue = (question as { answer?: string }).answer || '';
+          }
+        }
+      }
+
+      return {
+        fieldId: field.id,
+        label: field.questionName,
+        value: existingValue,
+        sectionName: field.sectionName,
+        questionType: field.questionType,
+        isVoiceFillable: field.isVoiceFillable,
+      };
+    });
+
+    setNoteData({
+      patient,
+      template,
+      appointment: null,
+      clinikoAppointment: null,
+      appointmentTypeName: null,
+      fieldValues,
+      editingNoteId: note.id,
+    });
+  }, []);
+
+  /**
+   * Clear the editing state (return to create mode)
+   */
+  const clearEditingMode = useCallback(() => {
+    setNoteData(prev => ({ ...prev, editingNoteId: null }));
+  }, []);
+
   const setAppointment = useCallback((appointment: Appointment | null) => {
-    console.log('Setting appointment:', appointment?.label ?? 'No appointment');
     setNoteData(prev => ({ ...prev, appointment }));
   }, []);
 
   const setClinikoAppointment = useCallback((appointment: ClinikoIndividualAppointment | null) => {
-    console.log('Setting Cliniko appointment:', appointment?.id ?? 'No appointment');
     setNoteData(prev => ({ ...prev, clinikoAppointment: appointment }));
   }, []);
 
-  const setCopyPreviousNote = useCallback((copy: boolean) => {
-    console.log('Copy previous note:', copy);
-    setNoteData(prev => ({ ...prev, copyPreviousNote: copy }));
+  const setAppointmentTypeName = useCallback((name: string | null) => {
+    setNoteData(prev => ({ ...prev, appointmentTypeName: name }));
   }, []);
 
   const updateFieldValue = useCallback((fieldId: string, value: string) => {
@@ -137,6 +192,13 @@ export const [NoteProvider, useNote] = createContextHook(() => {
   const isSetupComplete = useMemo(() => {
     return noteData.patient !== null && noteData.template !== null;
   }, [noteData.patient, noteData.template]);
+
+  /**
+   * Whether we are in edit mode (editing existing note) vs create mode
+   */
+  const isEditMode = useMemo(() => {
+    return noteData.editingNoteId !== null;
+  }, [noteData.editingNoteId]);
 
   const filledFieldsCount = useMemo(() => {
     return noteData.fieldValues.filter(fv => fv.value.trim()).length;
@@ -202,9 +264,12 @@ export const [NoteProvider, useNote] = createContextHook(() => {
     const voiceFillable = noteData.fieldValues.filter(f => f.isVoiceFillable).length;
     const nonVoiceFillable = totalQuestions - voiceFillable;
 
+    const sections = noteData.template.content?.sections;
+    const sectionCount = (sections && Array.isArray(sections)) ? sections.length : 0;
+
     return {
       name: noteData.template.name,
-      sectionCount: noteData.template.content.sections.length,
+      sectionCount,
       totalQuestions,
       voiceFillable,
       nonVoiceFillable,
@@ -215,14 +280,17 @@ export const [NoteProvider, useNote] = createContextHook(() => {
     noteData,
     setPatient,
     setTemplate,
+    loadExistingNote,
+    clearEditingMode,
     setAppointment,
     setClinikoAppointment,
-    setCopyPreviousNote,
+    setAppointmentTypeName,
     updateFieldValue,
     appendToField,
     replaceFieldValue,
     resetNote,
     isSetupComplete,
+    isEditMode,
     filledFieldsCount,
     voiceFillableFields,
     fieldsBySection,

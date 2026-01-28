@@ -11,18 +11,25 @@ import {
   listAppTemplates,
   listTreatmentNoteTemplates,
   getTreatmentNoteTemplate,
+  listTreatmentNotes,
+  getTreatmentNote,
   createTreatmentNote,
   updateTreatmentNote,
   getPatientAppointments,
   getTodayAppointments,
+  getAppointmentsInRange,
+  getAppointmentType,
   ListPatientsOptions,
   ListTemplatesOptions,
+  ListNotesOptions,
   ClinikoUser,
   ClinikoPatient,
   ClinikoTreatmentNoteTemplate,
   ClinikoTreatmentNote,
   ClinikoIndividualAppointment,
+  ClinikoAppointmentType,
   CreateTreatmentNotePayload,
+  UpdateTreatmentNotePayload,
   AppPatient,
   AppTemplate,
   ClinikoError,
@@ -44,7 +51,13 @@ export const clinikoKeys = {
   appointments: () => [...clinikoKeys.all, 'appointments'] as const,
   appointmentsToday: () => [...clinikoKeys.appointments(), 'today'] as const,
   appointmentsPatient: (patientId: string) => [...clinikoKeys.appointments(), 'patient', patientId] as const,
+  appointmentsCalendar: (daysBack: number, daysForward: number) => 
+    [...clinikoKeys.appointments(), 'calendar', daysBack, daysForward] as const,
+  appointmentTypes: () => [...clinikoKeys.all, 'appointmentTypes'] as const,
+  appointmentTypeDetail: (id: string) => [...clinikoKeys.appointmentTypes(), 'detail', id] as const,
   notes: () => [...clinikoKeys.all, 'notes'] as const,
+  patientNotes: (patientId: string) => [...clinikoKeys.notes(), 'patient', patientId] as const,
+  noteDetail: (noteId: string) => [...clinikoKeys.notes(), 'detail', noteId] as const,
 };
 
 // ============================================================================
@@ -206,6 +219,94 @@ export function usePatientAppointments(
   });
 }
 
+/**
+ * Fetch appointments within a date range for calendar view
+ * Defaults to past 7 days through next 30 days
+ */
+export function usePractitionerAppointments(
+  options: { daysBack?: number; daysForward?: number } = {},
+  queryOptions?: Omit<UseQueryOptions<ClinikoIndividualAppointment[], ClinikoError>, 'queryKey' | 'queryFn'>
+) {
+  const { daysBack = 7, daysForward = 30 } = options;
+  
+  return useQuery<ClinikoIndividualAppointment[], ClinikoError>({
+    queryKey: clinikoKeys.appointmentsCalendar(daysBack, daysForward),
+    queryFn: () => getAppointmentsInRange({ daysBack, daysForward }),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 10 * 60 * 1000,
+    ...queryOptions,
+  });
+}
+
+// ============================================================================
+// Treatment Note Hooks
+// ============================================================================
+
+/**
+ * Fetch treatment notes for a specific patient
+ */
+export function usePatientTreatmentNotes(
+  patientId: string,
+  queryOptions?: Omit<UseQueryOptions<ClinikoTreatmentNote[], ClinikoError>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery<ClinikoTreatmentNote[], ClinikoError>({
+    queryKey: clinikoKeys.patientNotes(patientId),
+    queryFn: async () => {
+      // Fetch ALL treatment notes (both drafts and finalized)
+      const response = await listTreatmentNotes({ patientId });
+      return response.treatment_notes;
+    },
+    enabled: !!patientId,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    ...queryOptions,
+  });
+}
+
+/**
+ * Fetch a single treatment note by ID
+ */
+export function useTreatmentNote(
+  noteId: string,
+  queryOptions?: Omit<UseQueryOptions<ClinikoTreatmentNote, ClinikoError>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery<ClinikoTreatmentNote, ClinikoError>({
+    queryKey: clinikoKeys.noteDetail(noteId),
+    queryFn: () => getTreatmentNote(noteId),
+    enabled: !!noteId,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: (failureCount, error) => {
+      // Don't retry on 401 (invalid credentials) or 404 (not found)
+      if (error.status === 401 || error.status === 404) return false;
+      return failureCount < 2;
+    },
+    ...queryOptions,
+  });
+}
+
+// ============================================================================
+// Appointment Type Hooks
+// ============================================================================
+
+/**
+ * Fetch an appointment type by ID
+ * Used to get the name of an appointment type (e.g., "First Appointment", "Standard Consultation")
+ */
+export function useClinikoAppointmentType(
+  appointmentTypeId: string | undefined,
+  queryOptions?: Omit<UseQueryOptions<ClinikoAppointmentType, ClinikoError>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery<ClinikoAppointmentType, ClinikoError>({
+    queryKey: clinikoKeys.appointmentTypeDetail(appointmentTypeId ?? ''),
+    queryFn: () => getAppointmentType(appointmentTypeId!),
+    enabled: !!appointmentTypeId,
+    staleTime: 10 * 60 * 1000, // 10 minutes - appointment types rarely change
+    gcTime: 30 * 60 * 1000,
+    ...queryOptions,
+  });
+}
+
 // ============================================================================
 // Treatment Note Mutations
 // ============================================================================
@@ -234,11 +335,13 @@ export function useUpdateTreatmentNote() {
   return useMutation<
     ClinikoTreatmentNote,
     ClinikoError,
-    { noteId: string; payload: Partial<CreateTreatmentNotePayload> }
+    { noteId: string; payload: UpdateTreatmentNotePayload }
   >({
     mutationFn: ({ noteId, payload }) => updateTreatmentNote(noteId, payload),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      // Invalidate notes list and the specific note detail
       queryClient.invalidateQueries({ queryKey: clinikoKeys.notes() });
+      queryClient.invalidateQueries({ queryKey: clinikoKeys.noteDetail(variables.noteId) });
     },
   });
 }

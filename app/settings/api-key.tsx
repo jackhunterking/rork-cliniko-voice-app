@@ -19,8 +19,9 @@ import { useClinikoUser, useClinikoCache } from '@/hooks/useCliniko';
 import {
   getClinikoApiKey,
   getClinikoShard,
-  saveClinikoCredentials,
+  saveClinikoCredentialsWithBackup,
   clearAllClinikoData,
+  deleteCredentialsFromBackend,
 } from '@/lib/secure-storage';
 import {
   validateClinikoCredentials,
@@ -106,8 +107,8 @@ export default function ApiKeyScreen() {
         return;
       }
 
-      // Save credentials
-      await saveClinikoCredentials(trimmedKey, selectedShard.id, user.id);
+      // Save credentials (also syncs to backend)
+      await saveClinikoCredentialsWithBackup(trimmedKey, selectedShard.id, user.id);
       
       // Clear cached Cliniko data and refetch
       clinikoCache.clearAll();
@@ -146,8 +147,13 @@ export default function ApiKeyScreen() {
           onPress: async () => {
             setIsDisconnecting(true);
             try {
-              // Clear all Cliniko data
+              // Clear all Cliniko data locally
               await clearAllClinikoData();
+              
+              // Delete from backend (fire and forget)
+              deleteCredentialsFromBackend().catch((err) => {
+                console.warn('Failed to delete from backend:', err);
+              });
               
               // Clear cache
               clinikoCache.clearAll();

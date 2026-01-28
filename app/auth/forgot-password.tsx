@@ -3,12 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { ChevronLeft, Mail } from "lucide-react-native";
+import { Mail } from "lucide-react-native";
 import { colors, spacing, radius } from "@/constants/colors";
+import { TouchableOpacity } from "react-native";
 
 /**
  * Forgot Password screen - redirects to sign-in since we use Magic Links.
@@ -18,15 +17,7 @@ export default function ForgotPasswordScreen() {
   const router = useRouter();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Forgot password?</Text>
-        <View style={styles.placeholder} />
-      </View>
-
+    <View style={styles.container}>
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Mail size={48} color={colors.primary} />
@@ -46,7 +37,7 @@ export default function ForgotPasswordScreen() {
           <Text style={styles.primaryButtonText}>Go to sign in</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -54,27 +45,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: "600" as const,
-    color: colors.textPrimary,
-  },
-  placeholder: {
-    width: 32,
   },
   content: {
     flex: 1,

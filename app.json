@@ -11,16 +11,20 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#007FA3"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.rork.cliniko-voice-app"
+      "bundleIdentifier": "app.rork.cliniko-voice-app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Cliniko Voice needs access to your microphone to transcribe your clinical notes in real-time.",
+        "UIBackgroundModes": ["audio"]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#007FA3"
       },
       "package": "app.rork.cliniko_voice_app"
     },

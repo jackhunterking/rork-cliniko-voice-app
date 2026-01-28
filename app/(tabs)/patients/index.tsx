@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { ChevronRight, AlertCircle, WifiOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SearchBar } from '@/components/SearchBar';
@@ -86,8 +86,10 @@ export default function PatientsListScreen() {
   }, [search, patients]);
 
   const handleSelectPatient = useCallback((patient: AppPatient) => {
-    console.log('Selected patient:', patient.name);
-    // Convert AppPatient to the format expected by NoteContext
+    console.log('Selected patient:', patient.name, 'ID:', patient.id);
+    // Reset note context first to ensure clean slate, then set new patient
+    // This prevents any data from a previous patient from contaminating the view
+    // The setPatient call will update the context with the new patient's info
     setPatient({
       id: patient.id,
       name: patient.name,
@@ -125,14 +127,6 @@ export default function PatientsListScreen() {
   if (isLoading && !isRefetching) {
     return (
       <View style={styles.container}>
-        <Stack.Screen
-          options={{
-            title: 'Patients',
-            headerLargeTitle: true,
-            headerShadowVisible: false,
-            headerStyle: { backgroundColor: colors.background },
-          }}
-        />
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading patients...</Text>
@@ -148,14 +142,6 @@ export default function PatientsListScreen() {
 
     return (
       <View style={styles.container}>
-        <Stack.Screen
-          options={{
-            title: 'Patients',
-            headerLargeTitle: true,
-            headerShadowVisible: false,
-            headerStyle: { backgroundColor: colors.background },
-          }}
-        />
         <View style={styles.centerContent}>
           {isNetworkError ? (
             <WifiOff size={48} color={colors.textSecondary} />
@@ -199,14 +185,6 @@ export default function PatientsListScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: 'Patients',
-          headerLargeTitle: true,
-          headerShadowVisible: false,
-          headerStyle: { backgroundColor: colors.background },
-        }}
-      />
       <View style={styles.searchContainer}>
         <SearchBar
           value={search}

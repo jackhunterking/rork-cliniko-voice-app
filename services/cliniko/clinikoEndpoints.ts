@@ -14,7 +14,9 @@ import {
   ClinikoNotesResponse,
   ClinikoIndividualAppointment,
   ClinikoAppointmentsResponse,
+  ClinikoAppointmentType,
   CreateTreatmentNotePayload,
+  UpdateTreatmentNotePayload,
   AppPatient,
   AppTemplate,
   clinikoPatientToAppPatient,
@@ -64,7 +66,9 @@ export async function listPatients(
     params.append('q[]', `last_name:~${options.query}`);
   }
   if (options.archived === false) {
-    params.append('q[]', 'archived_at:=');
+    // Use !? operator to filter where archived_at is null (not archived)
+    // Valid operators for archived_at: >=, >, <=, <, ?, !?, *
+    params.append('q[]', 'archived_at:!?');
   }
 
   const queryString = params.toString();
@@ -131,7 +135,8 @@ export async function listTreatmentNoteTemplates(
   let endpoint = '/treatment_note_templates';
   
   if (!options.includeArchived) {
-    endpoint += '?q[]=archived_at:=';
+    // Use !? operator to filter where archived_at is null (not archived)
+    endpoint += '?q[]=archived_at:!?';
   }
   
   return clinikoGet<ClinikoTemplatesResponse>(endpoint, config);
@@ -226,7 +231,7 @@ export async function createTreatmentNote(
  */
 export async function updateTreatmentNote(
   noteId: string,
-  payload: Partial<CreateTreatmentNotePayload>,
+  payload: UpdateTreatmentNotePayload,
   config?: ClinikoClientConfig
 ): Promise<ClinikoTreatmentNote> {
   return clinikoPatch<ClinikoTreatmentNote>(`/treatment_notes/${noteId}`, payload, config);
@@ -304,4 +309,58 @@ export async function getTodayAppointments(
   }, config);
   
   return response.individual_appointments;
+}
+
+/**
+ * Get appointments within a date range (for practitioner calendar view)
+ * Defaults to past 7 days through next 30 days
+ */
+export async function getAppointmentsInRange(
+  options: {
+    daysBack?: number;
+    daysForward?: number;
+  } = {},
+  config?: ClinikoClientConfig
+): Promise<ClinikoIndividualAppointment[]> {
+  const { daysBack = 7, daysForward = 30 } = options;
+  
+  const now = new Date();
+  const fromDate = new Date(now);
+  fromDate.setDate(fromDate.getDate() - daysBack);
+  fromDate.setHours(0, 0, 0, 0);
+  
+  const toDate = new Date(now);
+  toDate.setDate(toDate.getDate() + daysForward);
+  toDate.setHours(23, 59, 59, 999);
+  
+  const response = await listIndividualAppointments({
+    startsAt: { from: fromDate.toISOString(), to: toDate.toISOString() },
+    perPage: 100, // Get more appointments for calendar view
+  }, config);
+  
+  return response.individual_appointments;
+}
+
+// ============================================================================
+// Appointment Type Endpoints
+// ============================================================================
+
+/**
+ * Get a single appointment type by ID
+ * Used to fetch the name of an appointment type (e.g., "First Appointment", "Standard Consultation")
+ */
+export async function getAppointmentType(
+  appointmentTypeId: string,
+  config?: ClinikoClientConfig
+): Promise<ClinikoAppointmentType> {
+  return clinikoGet<ClinikoAppointmentType>(`/appointment_types/${appointmentTypeId}`, config);
+}
+
+/**
+ * Extract appointment type ID from the appointment type link
+ * The link format is typically: https://api.au1.cliniko.com/v1/appointment_types/123456
+ */
+export function extractAppointmentTypeIdFromLink(link: string): string | null {
+  const match = link.match(/\/appointment_types\/(\d+)$/);
+  return match ? match[1] : null;
 }

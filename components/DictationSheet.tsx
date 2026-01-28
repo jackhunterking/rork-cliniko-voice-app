@@ -1,15 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Animated,
-} from 'react-native';
-import { Mic, MicOff, X } from 'lucide-react-native';
-import { BottomSheet } from './BottomSheet';
-import { colors, radius, spacing } from '@/constants/colors';
+/**
+ * DictationSheet Component
+ * Full-screen recording sheet with real-time AssemblyAI transcription
+ * Wrapper around FullScreenRecordingSheet with recording session management
+ */
+
+import React, { useCallback, useEffect, useRef } from 'react';
+import { FullScreenRecordingSheet } from './FullScreenRecordingSheet';
+import { useRecordingSession } from '@/hooks/useRecordingSession';
 
 interface DictationSheetProps {
   visible: boolean;
@@ -19,13 +16,6 @@ interface DictationSheetProps {
   onReplace: (text: string) => void;
 }
 
-const mockTranscripts = [
-  "Patient presents with lower back pain that started three days ago.",
-  " No radiating symptoms. Pain is described as dull and constant.",
-  " Pain level rated 6 out of 10. Aggravated by prolonged sitting.",
-  " No previous history of back problems.",
-];
-
 export function DictationSheet({
   visible,
   onClose,
@@ -33,216 +23,83 @@ export function DictationSheet({
   onInsert,
   onReplace,
 }: DictationSheetProps) {
-  const [isRecording, setIsRecording] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [transcriptIndex, setTranscriptIndex] = useState(0);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const {
+    recordingState,
+    isRecording,
+    amplitude,
+    finalText,
+    partialText,
+    error,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+    resetSession,
+    prepareRecording,
+  } = useRecordingSession({
+    onError: (errorMessage) => {
+      if (__DEV__) console.log('[DictationSheet] Recording error:', errorMessage);
+    },
+  });
 
+  // Track if we've already prepared for this sheet opening
+  const hasPreparedRef = useRef(false);
+
+  // Preconnect when sheet becomes visible - this makes recording start instant
+  useEffect(() => {
+    if (visible && !hasPreparedRef.current) {
+      hasPreparedRef.current = true;
+      if (__DEV__) console.log('[DictationSheet] Sheet visible, preconnecting...');
+      prepareRecording();
+    }
+  }, [visible, prepareRecording]);
+
+  // Reset session when sheet is closed
   useEffect(() => {
     if (!visible) {
-      setIsRecording(false);
-      setTranscript('');
-      setTranscriptIndex(0);
+      hasPreparedRef.current = false;
+      resetSession();
     }
-  }, [visible]);
+  }, [visible, resetSession]);
 
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | undefined;
-    if (isRecording && transcriptIndex < mockTranscripts.length) {
-      interval = setInterval(() => {
-        setTranscript(prev => prev + mockTranscripts[transcriptIndex]);
-        setTranscriptIndex(prev => prev + 1);
-      }, 1500);
+  // Handle confirm - insert the transcript
+  const handleConfirm = useCallback(() => {
+    const transcript = finalText.trim() || partialText.trim();
+    if (transcript) {
+      onInsert(transcript);
     }
-    return () => clearInterval(interval);
-  }, [isRecording, transcriptIndex]);
+  }, [finalText, partialText, onInsert]);
 
-  useEffect(() => {
+  // Handle cancel - stop recording and close
+  const handleCancel = useCallback(async () => {
     if (isRecording) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.15,
-            duration: 600,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 600,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    } else {
-      pulseAnim.stopAnimation();
-      pulseAnim.setValue(1);
+      await cancelRecording();
     }
-  }, [isRecording, pulseAnim]);
+    onClose();
+  }, [isRecording, cancelRecording, onClose]);
 
-  const toggleRecording = () => {
-    setIsRecording(prev => !prev);
-  };
-
-  const handleInsert = () => {
-    if (transcript.trim()) {
-      onInsert(transcript.trim());
-      onClose();
+  // Handle close - clean up and close
+  const handleClose = useCallback(async () => {
+    if (isRecording) {
+      await cancelRecording();
     }
-  };
-
-  const handleReplace = () => {
-    if (transcript.trim()) {
-      onReplace(transcript.trim());
-      onClose();
-    }
-  };
+    onClose();
+  }, [isRecording, cancelRecording, onClose]);
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} maxHeight={400}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <Text style={styles.dictatingLabel}>Dictating into:</Text>
-            <Text style={styles.fieldLabel}>{fieldLabel}</Text>
-          </View>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <X size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.transcriptContainer}>
-          <Text style={styles.transcript}>
-            {transcript || (isRecording ? 'Listening...' : 'Tap the microphone to start dictating')}
-          </Text>
-        </ScrollView>
-
-        <View style={styles.controls}>
-          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-            <TouchableOpacity
-              style={[styles.micButton, isRecording && styles.micButtonActive]}
-              onPress={toggleRecording}
-              activeOpacity={0.8}
-            >
-              {isRecording ? (
-                <MicOff size={28} color="#FFFFFF" />
-              ) : (
-                <Mic size={28} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          </Animated.View>
-          <Text style={styles.micLabel}>
-            {isRecording ? 'Tap to stop' : 'Tap to record'}
-          </Text>
-        </View>
-
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleInsert}
-            disabled={!transcript.trim()}
-          >
-            <Text style={[styles.actionText, !transcript.trim() && styles.actionTextDisabled]}>
-              Insert
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleReplace}
-            disabled={!transcript.trim()}
-          >
-            <Text style={[styles.actionText, !transcript.trim() && styles.actionTextDisabled]}>
-              Replace
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={onClose}>
-            <Text style={[styles.actionText, styles.cancelText]}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </BottomSheet>
+    <FullScreenRecordingSheet
+      visible={visible}
+      onClose={handleClose}
+      fieldLabel={fieldLabel}
+      isRecording={isRecording}
+      recordingState={recordingState}
+      amplitude={amplitude}
+      finalText={finalText}
+      partialText={partialText}
+      error={error}
+      onStartRecording={startRecording}
+      onStopRecording={stopRecording}
+      onConfirm={handleConfirm}
+      onCancel={handleCancel}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: spacing.lg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: spacing.lg,
-  },
-  headerContent: {
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  dictatingLabel: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  fieldLabel: {
-    fontSize: 20,
-    fontWeight: '700' as const,
-    color: colors.textPrimary,
-  },
-  closeButton: {
-    padding: spacing.xs,
-  },
-  transcriptContainer: {
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    minHeight: 100,
-    maxHeight: 140,
-    marginBottom: spacing.lg,
-  },
-  transcript: {
-    fontSize: 16,
-    color: colors.textPrimary,
-    lineHeight: 24,
-  },
-  controls: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  micButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  micButtonActive: {
-    backgroundColor: colors.error,
-  },
-  micLabel: {
-    marginTop: spacing.sm,
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: radius.md,
-  },
-  actionText: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: colors.primary,
-  },
-  actionTextDisabled: {
-    opacity: 0.4,
-  },
-  cancelText: {
-    color: colors.textSecondary,
-  },
-});

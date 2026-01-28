@@ -105,9 +105,10 @@ function RootLayoutNav() {
       <Stack.Screen name="splash" options={{ headerShown: false, animation: 'none' }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="patient/[id]" options={{ title: "Patient" }} />
+      <Stack.Screen name="note/[id]" options={{ title: "Treatment Note" }} />
       <Stack.Screen name="note/setup" options={{ title: "New Treatment Note" }} />
       <Stack.Screen name="note/editor" options={{ title: "Treatment Note" }} />
-      <Stack.Screen name="note/review" options={{ title: "Review" }} />
+      <Stack.Screen name="note/live" options={{ title: "Recording" }} />
       <Stack.Screen
         name="note/success"
         options={{

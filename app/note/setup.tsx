@@ -5,11 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
   ActivityIndicator,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { ChevronRight, Check, ChevronDown, AlertCircle, Mic, MicOff } from 'lucide-react-native';
+import { ChevronRight, Check, ChevronDown, AlertCircle, Mic } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Card } from '@/components/Card';
@@ -25,10 +24,7 @@ export default function NoteSetupScreen() {
   const {
     noteData,
     setTemplate,
-    setAppointment,
-    setCopyPreviousNote,
     isSetupComplete,
-    templateSummary,
   } = useNote();
 
   const [templateSheetVisible, setTemplateSheetVisible] = useState(false);
@@ -75,9 +71,15 @@ export default function NoteSetupScreen() {
   // Count voice-fillable questions for a template
   const countVoiceFillable = (template: ClinikoTreatmentNoteTemplate) => {
     let count = 0;
-    for (const section of template.content.sections) {
-      for (const question of section.questions) {
-        if (isVoiceFillable(question.type)) {
+    const sections = template.content?.sections;
+    if (!sections || !Array.isArray(sections)) return 0;
+    
+    for (const section of sections) {
+      const questions = section?.questions;
+      if (!questions || !Array.isArray(questions)) continue;
+      
+      for (const question of questions) {
+        if (question?.type && isVoiceFillable(question.type)) {
           count++;
         }
       }
@@ -87,10 +89,23 @@ export default function NoteSetupScreen() {
 
   const countTotalQuestions = (template: ClinikoTreatmentNoteTemplate) => {
     let count = 0;
-    for (const section of template.content.sections) {
-      count += section.questions.length;
+    const sections = template.content?.sections;
+    if (!sections || !Array.isArray(sections)) return 0;
+    
+    for (const section of sections) {
+      const questions = section?.questions;
+      if (questions && Array.isArray(questions)) {
+        count += questions.length;
+      }
     }
     return count;
+  };
+  
+  // Safe getter for section count
+  const getSectionCount = (template: ClinikoTreatmentNoteTemplate) => {
+    const sections = template.content?.sections;
+    if (!sections || !Array.isArray(sections)) return 0;
+    return sections.length;
   };
 
   return (
@@ -118,80 +133,35 @@ export default function NoteSetupScreen() {
         )}
 
         <Card>
-          <Text style={styles.cardTitle}>Note Settings</Text>
+          <Text style={styles.cardTitle}>Select Template</Text>
+          <Text style={styles.cardSubtitle}>
+            Choose a template to structure your treatment note
+          </Text>
 
           <TouchableOpacity
-            style={styles.settingRow}
+            style={styles.templateSelector}
             onPress={() => setTemplateSheetVisible(true)}
             activeOpacity={0.7}
             disabled={isLoadingTemplates}
           >
-            <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Template</Text>
-              <View style={styles.settingValueRow}>
-                {isLoadingTemplates || isLoadingTemplateDetail ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <>
-                    <Text
-                      style={[
-                        styles.settingValue,
-                        !noteData.template && styles.settingPlaceholder,
-                      ]}
-                    >
-                      {noteData.template?.name ?? 'Select template'}
-                    </Text>
-                    <ChevronRight size={18} color={colors.textSecondary} />
-                  </>
-                )}
-              </View>
-              {templateSummary && (
-                <View style={styles.templateSummaryRow}>
-                  <View style={styles.summaryBadge}>
-                    <Mic size={12} color={colors.success} />
-                    <Text style={styles.summaryBadgeText}>
-                      {templateSummary.voiceFillable} voice-fillable
-                    </Text>
-                  </View>
-                  {templateSummary.nonVoiceFillable > 0 && (
-                    <View style={[styles.summaryBadge, styles.summaryBadgeSecondary]}>
-                      <MicOff size={12} color={colors.textSecondary} />
-                      <Text style={styles.summaryBadgeTextSecondary}>
-                        {templateSummary.nonVoiceFillable} other
-                      </Text>
-                    </View>
-                  )}
-                </View>
+            <View style={styles.templateSelectorContent}>
+              {isLoadingTemplates || isLoadingTemplateDetail ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <>
+                  <Text
+                    style={[
+                      styles.templateSelectorText,
+                      !noteData.template && styles.templateSelectorPlaceholder,
+                    ]}
+                  >
+                    {noteData.template?.name ?? 'Select a template'}
+                  </Text>
+                  <ChevronRight size={18} color={colors.textSecondary} />
+                </>
               )}
             </View>
           </TouchableOpacity>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Appointment</Text>
-              <Text style={styles.appointmentValue}>
-                {noteData.appointment?.label ?? 'No appointment'}
-              </Text>
-              {noteData.appointment && (
-                <Text style={styles.settingHint}>Read-only</Text>
-              )}
-            </View>
-          </View>
-
-          <View style={[styles.settingRow, styles.settingRowLast]}>
-            <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Copy previous note</Text>
-              <Text style={styles.settingHint}>
-                Pre-fill fields from last treatment note
-              </Text>
-            </View>
-            <Switch
-              value={noteData.copyPreviousNote}
-              onValueChange={setCopyPreviousNote}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
         </Card>
 
         {noteData.template && (
@@ -211,7 +181,7 @@ export default function NoteSetupScreen() {
                 ]}
               />
             </TouchableOpacity>
-            {previewExpanded && (
+            {previewExpanded && noteData.template.content?.sections && (
               <View style={styles.sectionsList}>
                 {noteData.template.content.sections.map((section, sectionIndex) => (
                   <View key={`section-${sectionIndex}`} style={styles.sectionPreview}>
@@ -220,26 +190,11 @@ export default function NoteSetupScreen() {
                       <Text style={styles.sectionDescription}>{section.description}</Text>
                     )}
                     <View style={styles.questionsList}>
-                      {section.questions.map((question, questionIndex) => {
-                        const voiceFillable = isVoiceFillable(question.type);
+                      {(section.questions ?? []).map((question, questionIndex) => {
                         return (
                           <View key={`question-${sectionIndex}-${questionIndex}`} style={styles.questionPreview}>
-                            <View style={styles.questionHeader}>
-                              {voiceFillable ? (
-                                <Mic size={14} color={colors.success} />
-                              ) : (
-                                <MicOff size={14} color={colors.textSecondary} />
-                              )}
-                              <Text style={[
-                                styles.questionLabel,
-                                !voiceFillable && styles.questionLabelDisabled
-                              ]}>
-                                {question.name}
-                              </Text>
-                            </View>
-                            <Text style={styles.questionType}>
-                              {question.type}
-                              {!voiceFillable && ' (manual entry only)'}
+                            <Text style={styles.questionLabel}>
+                              {question.name}
                             </Text>
                           </View>
                         );
@@ -263,6 +218,10 @@ export default function NoteSetupScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        <Text style={styles.hint}>
+          You can link an appointment to this note in the next step.
+        </Text>
       </ScrollView>
 
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
@@ -298,6 +257,7 @@ export default function NoteSetupScreen() {
               {templates.map(template => {
                 const voiceFillableCount = countVoiceFillable(template);
                 const totalCount = countTotalQuestions(template);
+                const isSelected = noteData.template?.id === template.id;
                 
                 return (
                   <TouchableOpacity
@@ -307,10 +267,15 @@ export default function NoteSetupScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={styles.sheetOptionContent}>
-                      <Text style={styles.sheetOptionText}>{template.name}</Text>
+                      <Text style={[
+                        styles.sheetOptionText,
+                        isSelected && styles.sheetOptionTextSelected,
+                      ]}>
+                        {template.name}
+                      </Text>
                       <View style={styles.sheetOptionMeta}>
                         <Text style={styles.sheetOptionSubtext}>
-                          {template.content.sections.length} sections • {totalCount} fields
+                          {getSectionCount(template)} sections • {totalCount} fields
                         </Text>
                         <View style={styles.sheetOptionBadge}>
                           <Mic size={10} color={colors.success} />
@@ -320,7 +285,7 @@ export default function NoteSetupScreen() {
                         </View>
                       </View>
                     </View>
-                    {noteData.template?.id === template.id && (
+                    {isSelected && (
                       <Check size={20} color={colors.primary} />
                     )}
                   </TouchableOpacity>
@@ -372,79 +337,42 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   cardTitle: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '600' as const,
     color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
-  settingRow: {
+  templateSelector: {
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  templateSelectorContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
   },
-  settingRowLast: {
-    borderBottomWidth: 0,
-    paddingBottom: 0,
-  },
-  settingContent: {
+  templateSelectorText: {
+    fontSize: 16,
+    color: colors.primary,
     flex: 1,
   },
-  settingLabel: {
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  settingHint: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  settingValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  settingValue: {
-    fontSize: 15,
-    color: colors.primary,
-  },
-  settingPlaceholder: {
+  templateSelectorPlaceholder: {
     color: colors.textSecondary,
   },
-  appointmentValue: {
-    fontSize: 15,
-    color: colors.textPrimary,
-    marginTop: 4,
-  },
-  templateSummaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  summaryBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.success + '15',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
-  },
-  summaryBadgeSecondary: {
-    backgroundColor: colors.backgroundSecondary,
-  },
-  summaryBadgeText: {
-    fontSize: 12,
-    color: colors.success,
-    fontWeight: '500' as const,
-  },
-  summaryBadgeTextSecondary: {
-    fontSize: 12,
+  hint: {
+    fontSize: 14,
     color: colors.textSecondary,
-    fontWeight: '500' as const,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+    fontStyle: 'italic' as const,
   },
   previewSection: {
     marginTop: spacing.md,
@@ -498,23 +426,9 @@ const styles = StyleSheet.create({
     borderLeftColor: colors.border,
     paddingLeft: spacing.sm,
   },
-  questionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
   questionLabel: {
     fontSize: 14,
     color: colors.textPrimary,
-  },
-  questionLabelDisabled: {
-    color: colors.textSecondary,
-  },
-  questionType: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginLeft: 20,
-    marginTop: 2,
   },
   errorCard: {
     flexDirection: 'row',
@@ -614,6 +528,10 @@ const styles = StyleSheet.create({
   sheetOptionText: {
     fontSize: 17,
     color: colors.textPrimary,
+  },
+  sheetOptionTextSelected: {
+    color: colors.primary,
+    fontWeight: '500' as const,
   },
   sheetOptionMeta: {
     flexDirection: 'row',

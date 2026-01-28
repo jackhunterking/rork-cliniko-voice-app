@@ -195,15 +195,30 @@ export interface ClinikoTemplatesResponse extends ClinikoListResponse<ClinikoTre
 // Treatment Note Types
 // ============================================================================
 
-export interface ClinikoNoteAnswer {
-  name: string; // Question name
-  value: string; // Answer value (can be empty string)
+/**
+ * Question format for CREATE/UPDATE treatment notes via API.
+ * 
+ * Based on Cliniko OpenAPI documentation curl example:
+ * {
+ *   "answer": "string",
+ *   "name": "string", 
+ *   "type": "text"
+ * }
+ * 
+ * IMPORTANT: 
+ * - 'answer' must NOT be empty - only include questions with actual content
+ * - 'type' should be "text" regardless of template's original type
+ */
+export interface ClinikoNoteQuestion {
+  answer: string;
+  name: string;
+  type: 'text';  // Always "text" per API docs example
 }
 
 export interface ClinikoNoteSection {
-  name: string; // Section name
+  name?: string;
   description?: string;
-  questions: ClinikoNoteAnswer[];
+  questions: ClinikoNoteQuestion[];
 }
 
 export interface ClinikoNoteContent {
@@ -243,6 +258,17 @@ export interface CreateTreatmentNotePayload {
   draft?: boolean;
   patient_id: string;
   treatment_note_template_id: string;
+}
+
+/**
+ * Payload for updating an existing treatment note via PATCH.
+ * All fields are optional - only specified fields will be updated.
+ */
+export interface UpdateTreatmentNotePayload {
+  content?: ClinikoNoteContent;
+  draft?: boolean;
+  title?: string;
+  author_name?: string | null;
 }
 
 export interface ClinikoNotesResponse extends ClinikoListResponse<ClinikoTreatmentNote> {
@@ -296,18 +322,46 @@ export interface ClinikoAppointmentsResponse extends ClinikoListResponse<Cliniko
 }
 
 // ============================================================================
+// Appointment Type Types
+// ============================================================================
+
+export interface ClinikoAppointmentType {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  archived_at: string | null;
+  category: string | null;
+  color: string | null;
+  default_billable_item_id: string | null;
+  description: string | null;
+  duration_in_minutes: number;
+  max_attendees: number;
+  name: string;
+  show_in_online_bookings: boolean;
+  treatment_note_template?: {
+    links: ClinikoLinks;
+  };
+  links: ClinikoLinks;
+}
+
+export interface ClinikoAppointmentTypesResponse extends ClinikoListResponse<ClinikoAppointmentType> {
+  appointment_types: ClinikoAppointmentType[];
+}
+
+// ============================================================================
 // Error Types
 // ============================================================================
 
 export interface ClinikoApiError {
   status: number;
   message: string;
-  errors?: Record<string, string[]>;
+  // Cliniko can return errors as either strings or string arrays
+  errors?: Record<string, string | string[]>;
 }
 
 export class ClinikoError extends Error {
   status: number;
-  errors?: Record<string, string[]>;
+  errors?: Record<string, string | string[]>;
 
   constructor(error: ClinikoApiError) {
     super(error.message);
@@ -380,11 +434,17 @@ export function clinikoTemplateToAppTemplate(template: ClinikoTreatmentNoteTempl
   let questionCount = 0;
   let voiceFillableCount = 0;
 
-  for (const section of template.content.sections) {
-    for (const question of section.questions) {
-      questionCount++;
-      if (isVoiceFillable(question.type)) {
-        voiceFillableCount++;
+  const sections = template.content?.sections;
+  if (sections && Array.isArray(sections)) {
+    for (const section of sections) {
+      const questions = section?.questions;
+      if (questions && Array.isArray(questions)) {
+        for (const question of questions) {
+          questionCount++;
+          if (question?.type && isVoiceFillable(question.type)) {
+            voiceFillableCount++;
+          }
+        }
       }
     }
   }
@@ -392,7 +452,7 @@ export function clinikoTemplateToAppTemplate(template: ClinikoTreatmentNoteTempl
   return {
     id: template.id,
     name: template.name,
-    sectionCount: template.content.sections.length,
+    sectionCount: sections?.length ?? 0,
     questionCount,
     voiceFillableCount,
   };
@@ -400,14 +460,22 @@ export function clinikoTemplateToAppTemplate(template: ClinikoTreatmentNoteTempl
 
 export function flattenTemplateToFields(template: ClinikoTreatmentNoteTemplate): AppNoteField[] {
   const fields: AppNoteField[] = [];
+  
+  const sections = template.content?.sections;
+  if (!sections || !Array.isArray(sections)) return fields;
 
-  template.content.sections.forEach((section, sectionIndex) => {
-    section.questions.forEach((question, questionIndex) => {
+  sections.forEach((section, sectionIndex) => {
+    const questions = section?.questions;
+    if (!questions || !Array.isArray(questions)) return;
+    
+    questions.forEach((question, questionIndex) => {
+      if (!question) return;
+      
       fields.push({
         id: `${sectionIndex}_${questionIndex}`,
-        sectionName: section.name,
+        sectionName: section.name ?? '',
         sectionIndex,
-        questionName: question.name,
+        questionName: question.name ?? '',
         questionIndex,
         questionType: question.type,
         isVoiceFillable: isVoiceFillable(question.type),
@@ -419,22 +487,69 @@ export function flattenTemplateToFields(template: ClinikoTreatmentNoteTemplate):
   return fields;
 }
 
+/**
+ * Converts app field values to Cliniko note content format.
+ * 
+ * Based on Cliniko OpenAPI documentation curl example:
+ * {
+ *   "content": {
+ *     "sections": [
+ *       {
+ *         "name": "string",
+ *         "description": "string",
+ *         "questions": [
+ *           {
+ *             "answer": "string",
+ *             "name": "string",
+ *             "type": "text"
+ *           }
+ *         ]
+ *       }
+ *     ]
+ *   }
+ * }
+ * 
+ * IMPORTANT:
+ * - Questions must be objects with {answer, name, type: "text"}
+ * - 'answer' must NOT be empty - only include questions with actual content
+ * - We filter out questions without answers since API rejects empty answers
+ */
 export function fieldsToNoteContent(
   template: ClinikoTreatmentNoteTemplate,
   fields: AppNoteField[]
 ): ClinikoNoteContent {
-  const sections: ClinikoNoteSection[] = template.content.sections.map((section, sectionIndex) => {
-    const questions: ClinikoNoteAnswer[] = section.questions.map((question, questionIndex) => {
-      const field = fields.find(f => f.sectionIndex === sectionIndex && f.questionIndex === questionIndex);
-      return {
-        name: question.name,
-        value: field?.value ?? '',
-      };
-    });
+  const templateSections = template.content?.sections;
+  if (!templateSections || !Array.isArray(templateSections)) {
+    return { sections: [] };
+  }
+  
+  const sections: ClinikoNoteSection[] = templateSections.map((section, sectionIndex) => {
+    const templateQuestions = section?.questions;
+    
+    // Convert each question to object format, filtering out empty answers
+    const questions: ClinikoNoteQuestion[] = (templateQuestions && Array.isArray(templateQuestions))
+      ? templateQuestions
+          .map((question, questionIndex) => {
+            const field = fields.find(f => f.sectionIndex === sectionIndex && f.questionIndex === questionIndex);
+            const answerValue = field?.value?.trim() ?? '';
+            
+            // Only include questions with actual answers
+            if (!answerValue) {
+              return null;
+            }
+            
+            return {
+              answer: answerValue,
+              name: question?.name ?? '',
+              type: 'text' as const,  // API requires type: "text"
+            };
+          })
+          .filter((q): q is ClinikoNoteQuestion => q !== null)
+      : [];
 
     return {
-      name: section.name,
-      description: section.description,
+      name: section?.name,
+      description: section?.description,
       questions,
     };
   });

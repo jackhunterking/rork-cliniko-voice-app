@@ -62,10 +62,6 @@ export default function WelcomeScreen() {
           >
             <Text style={styles.secondaryButtonText}>Create account</Text>
           </TouchableOpacity>
-
-          <Text style={styles.footnote}>
-            Connect your Cliniko API key after signing in.
-          </Text>
         </View>
       </ScrollView>
     </View>
@@ -89,13 +85,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 18,
+    width: 120,
+    height: 120,
+    borderRadius: 28,
     overflow: "hidden",
     marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
   },
   icon: {
     width: "100%",
@@ -141,11 +140,5 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 17,
     fontWeight: "600",
-  },
-  footnote: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: "center",
-    marginTop: spacing.sm,
   },
 });

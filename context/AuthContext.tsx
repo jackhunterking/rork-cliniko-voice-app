@@ -11,6 +11,7 @@ import {
   clearAllClinikoData,
   getCoupledUserId,
   isClinikoConfigured,
+  restoreCredentialsFromBackend,
 } from '@/lib/secure-storage';
 import { logAuth, errorAuth, maskSecret } from '@/lib/debug';
 import { clinikoKeys } from '@/hooks/useCliniko';
@@ -135,7 +136,20 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
             const isValid = await validateClinikoCredentialOwnership(initialSession.user.id);
             
             if (isValid) {
-              const isConfigured = await isClinikoConfigured();
+              let isConfigured = await isClinikoConfigured();
+              
+              // If no local credentials, try to restore from backend
+              if (!isConfigured) {
+                logAuth('No local credentials found - checking backend...');
+                const restored = await restoreCredentialsFromBackend(initialSession.user.id);
+                if (restored) {
+                  logAuth('Credentials restored from backend');
+                  isConfigured = true;
+                } else {
+                  logAuth('No credentials in backend either');
+                }
+              }
+              
               logAuth(`Cliniko configured: ${isConfigured}`);
               setHasClinikoKey(isConfigured);
             }
@@ -184,7 +198,20 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
               logAuth('Same user or new login - validating Cliniko credentials');
               const isValid = await validateClinikoCredentialOwnership(newSession.user.id);
               if (isValid) {
-                const isConfigured = await isClinikoConfigured();
+                let isConfigured = await isClinikoConfigured();
+                
+                // If no local credentials, try to restore from backend
+                if (!isConfigured) {
+                  logAuth('No local credentials found - checking backend...');
+                  const restored = await restoreCredentialsFromBackend(newSession.user.id);
+                  if (restored) {
+                    logAuth('Credentials restored from backend');
+                    isConfigured = true;
+                  } else {
+                    logAuth('No credentials in backend either');
+                  }
+                }
+                
                 logAuth(`Cliniko configured: ${isConfigured}`);
                 setHasClinikoKey(isConfigured);
               }

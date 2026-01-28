@@ -4,7 +4,7 @@
  * Uses react-native-reanimated for smooth 60fps animations
  */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -26,7 +26,7 @@ interface WaveformBarsProps {
   amplitude?: number;
   /** Processing state (shows pulsing animation) */
   isProcessing?: boolean;
-  /** Number of bars to display */
+  /** Number of bars to display (max 9) */
   barCount?: number;
   /** Color of the bars */
   barColor?: string;
@@ -36,23 +36,37 @@ interface WaveformBarsProps {
 
 const BAR_MIN_HEIGHT = 4;
 const BAR_MAX_HEIGHT = 32;
+const MAX_BARS = 9;
 
 export function WaveformBars({
   isRecording,
   amplitude = 0,
   isProcessing = false,
-  barCount = 9,
+  barCount = 5,
   barColor = colors.primary,
   style,
 }: WaveformBarsProps) {
-  // Create shared values for each bar
-  const barHeights = useMemo(
-    () => Array.from({ length: barCount }, () => useSharedValue(BAR_MIN_HEIGHT)),
-    [barCount]
-  );
-
+  // Clamp barCount to max 9 bars
+  const actualBarCount = Math.min(Math.max(1, barCount), MAX_BARS);
+  
+  // Create fixed shared values for each possible bar (max 9)
+  // This is the correct way to handle dynamic arrays with hooks
+  const bar0 = useSharedValue(BAR_MIN_HEIGHT);
+  const bar1 = useSharedValue(BAR_MIN_HEIGHT);
+  const bar2 = useSharedValue(BAR_MIN_HEIGHT);
+  const bar3 = useSharedValue(BAR_MIN_HEIGHT);
+  const bar4 = useSharedValue(BAR_MIN_HEIGHT);
+  const bar5 = useSharedValue(BAR_MIN_HEIGHT);
+  const bar6 = useSharedValue(BAR_MIN_HEIGHT);
+  const bar7 = useSharedValue(BAR_MIN_HEIGHT);
+  const bar8 = useSharedValue(BAR_MIN_HEIGHT);
+  
   // Processing animation shared value
   const processingPhase = useSharedValue(0);
+
+  // Array reference for easier iteration
+  const barHeightsRef = useRef([bar0, bar1, bar2, bar3, bar4, bar5, bar6, bar7, bar8]);
+  const barHeights = barHeightsRef.current.slice(0, actualBarCount);
 
   // Handle recording state changes
   useEffect(() => {
@@ -78,7 +92,7 @@ export function WaveformBars({
         });
       });
     }
-  }, [isRecording, isProcessing, barHeights, processingPhase]);
+  }, [isRecording, isProcessing]);
 
   // Update bar heights based on amplitude
   useEffect(() => {
@@ -87,12 +101,12 @@ export function WaveformBars({
     }
 
     // Create variation for visual interest
-    const middleIndex = Math.floor(barCount / 2);
+    const middleIndex = Math.floor(actualBarCount / 2);
     
     barHeights.forEach((height, index) => {
       // Bars in the middle are taller
       const distanceFromMiddle = Math.abs(index - middleIndex);
-      const positionFactor = 1 - (distanceFromMiddle / middleIndex) * 0.4;
+      const positionFactor = 1 - (distanceFromMiddle / Math.max(middleIndex, 1)) * 0.4;
       
       // Add some randomness for organic feel
       const randomFactor = 0.8 + Math.random() * 0.4;
@@ -113,7 +127,7 @@ export function WaveformBars({
         mass: 0.5,
       });
     });
-  }, [amplitude, isRecording, isProcessing, barCount, barHeights]);
+  }, [amplitude, isRecording, isProcessing, actualBarCount]);
 
   return (
     <View style={[styles.container, style]}>
@@ -125,7 +139,7 @@ export function WaveformBars({
           isProcessing={isProcessing}
           barColor={barColor}
           index={index}
-          totalBars={barCount}
+          totalBars={actualBarCount}
         />
       ))}
     </View>
