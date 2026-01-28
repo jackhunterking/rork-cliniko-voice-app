@@ -23,7 +23,7 @@ export default function SplashScreen() {
 
     const timeout = setTimeout(() => {
       console.log('Splash complete, navigating to auth/welcome');
-      router.replace('/(tabs)/home');
+      router.replace('/auth/welcome');
     }, 1500);
 
     return () => clearTimeout(timeout);
