@@ -235,6 +235,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderRadius: radius.md,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   inputGroup: {
     paddingHorizontal: spacing.md,

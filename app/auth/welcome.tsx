@@ -77,11 +77,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: "hidden",
     marginBottom: spacing.lg,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   icon: {
     width: "100%",
