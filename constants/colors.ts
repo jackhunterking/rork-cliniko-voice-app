@@ -9,6 +9,8 @@ export const colors = {
   success: '#10B981',
   error: '#EF4444',
   overlay: 'rgba(11, 18, 32, 0.5)',
+  placeholder: '#A0A8B8',
+  iconMuted: '#C0C6D0',
 };
 
 export const spacing = {

@@ -49,15 +49,17 @@ export default function SignInScreen() {
           </TouchableOpacity>
 
           <Text style={styles.largeTitle}>Sign in</Text>
+          <Text style={styles.subtitle}>Use your Cliniko Voice account</Text>
 
           <View style={styles.formSection}>
-            <View style={styles.inputRow}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Email</Text>
               <TextInput
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="Email"
-                placeholderTextColor={colors.textSecondary}
+                placeholder="you@example.com"
+                placeholderTextColor={colors.placeholder}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
@@ -65,29 +67,32 @@ export default function SignInScreen() {
               />
             </View>
             <View style={styles.separator} />
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoComplete="current-password"
-                testID="password-input"
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                {showPassword ? (
-                  <EyeOff size={20} color={colors.textSecondary} />
-                ) : (
-                  <Eye size={20} color={colors.textSecondary} />
-                )}
-              </TouchableOpacity>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <View style={styles.passwordRow}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Enter your password"
+                  placeholderTextColor={colors.placeholder}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoComplete="current-password"
+                  testID="password-input"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color={colors.iconMuted} />
+                  ) : (
+                    <Eye size={20} color={colors.iconMuted} />
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -116,16 +121,17 @@ export default function SignInScreen() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.signUpLink}
-            onPress={() => router.replace("/auth/sign-up")}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.signUpText}>
-              Don't have an account?{" "}
-              <Text style={styles.signUpTextBold}>Create one</Text>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              Don&apos;t have an account?{" "}
+              <Text
+                style={styles.footerLink}
+                onPress={() => router.replace("/auth/sign-up")}
+              >
+                Create one
+              </Text>
             </Text>
-          </TouchableOpacity>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -158,25 +164,44 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: "700" as const,
     color: colors.textPrimary,
-    marginBottom: 40,
+    marginBottom: 6,
     letterSpacing: 0.3,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    marginBottom: 32,
   },
   formSection: {
     backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     overflow: "hidden",
   },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  inputContainer: {
     paddingHorizontal: 16,
-    minHeight: 52,
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: "500" as const,
+    color: colors.textSecondary,
+    marginBottom: 6,
   },
   input: {
+    fontSize: 17,
+    color: colors.textPrimary,
+    paddingVertical: 4,
+  },
+  passwordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  passwordInput: {
     flex: 1,
     fontSize: 17,
     color: colors.textPrimary,
-    paddingVertical: 16,
+    paddingVertical: 4,
   },
   eyeButton: {
     padding: 8,
@@ -189,22 +214,20 @@ const styles = StyleSheet.create({
   },
   forgotPassword: {
     alignSelf: "flex-end",
-    marginTop: 16,
+    marginTop: 12,
     paddingVertical: 4,
   },
   forgotPasswordText: {
-    fontSize: 15,
-    color: colors.primary,
-    fontWeight: "500" as const,
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   primaryButton: {
     backgroundColor: colors.primary,
-    paddingVertical: 16,
+    height: 52,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 32,
-    minHeight: 52,
+    marginTop: 24,
   },
   primaryButtonDisabled: {
     opacity: 0.4,
@@ -214,15 +237,15 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "600" as const,
   },
-  signUpLink: {
+  footer: {
     alignItems: "center",
     paddingVertical: 24,
   },
-  signUpText: {
+  footerText: {
     fontSize: 15,
     color: colors.textSecondary,
   },
-  signUpTextBold: {
+  footerLink: {
     color: colors.primary,
     fontWeight: "600" as const,
   },
