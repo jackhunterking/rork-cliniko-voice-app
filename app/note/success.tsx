@@ -45,7 +45,7 @@ export default function NoteSuccessScreen() {
   const handleBackToPatients = () => {
     console.log('Returning to patients list');
     resetNote();
-    router.replace('/');
+    router.replace('/(tabs)/home');
   };
 
   return (

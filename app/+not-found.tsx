@@ -10,7 +10,7 @@ export default function NotFoundScreen() {
         <Text style={styles.title}>Page not found</Text>
         <Text style={styles.subtitle}>The page you are looking for does not exist.</Text>
 
-        <Link href="/" style={styles.link}>
+        <Link href="/(tabs)/home" style={styles.link}>
           <Text style={styles.linkText}>Back to patients</Text>
         </Link>
       </View>
