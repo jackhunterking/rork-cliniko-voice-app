@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import { Card } from '@/components/Card';
 import { BottomSheet } from '@/components/BottomSheet';
 import { colors, spacing, radius } from '@/constants/colors';
 import { templates, Template } from '@/mocks/templates';
-import { getAppointmentsForPatient, Appointment } from '@/mocks/appointments';
+import { getAppointmentsForPatient } from '@/mocks/appointments';
 import { useNote } from '@/context/NoteContext';
 
 export default function NoteSetupScreen() {
@@ -30,11 +30,18 @@ export default function NoteSetupScreen() {
   } = useNote();
 
   const [templateSheetVisible, setTemplateSheetVisible] = useState(false);
-  const [appointmentSheetVisible, setAppointmentSheetVisible] = useState(false);
 
   const patientAppointments = noteData.patient
     ? getAppointmentsForPatient(noteData.patient.id)
     : [];
+
+  const mostRecentAppointment = patientAppointments.length > 0 ? patientAppointments[0] : null;
+
+  useEffect(() => {
+    if (mostRecentAppointment && !noteData.appointment) {
+      setAppointment(mostRecentAppointment);
+    }
+  }, [mostRecentAppointment, noteData.appointment, setAppointment]);
 
   const handleContinue = () => {
     if (isSetupComplete) {
@@ -48,10 +55,7 @@ export default function NoteSetupScreen() {
     setTemplateSheetVisible(false);
   };
 
-  const handleSelectAppointment = (appointment: Appointment | null) => {
-    setAppointment(appointment);
-    setAppointmentSheetVisible(false);
-  };
+
 
   return (
     <View style={styles.container}>
@@ -101,26 +105,17 @@ export default function NoteSetupScreen() {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.settingRow}
-            onPress={() => setAppointmentSheetVisible(true)}
-            activeOpacity={0.7}
-          >
+          <View style={styles.settingRow}>
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Appointment</Text>
-              <View style={styles.settingValueRow}>
-                <Text
-                  style={[
-                    styles.settingValue,
-                    !noteData.appointment && styles.settingPlaceholder,
-                  ]}
-                >
-                  {noteData.appointment?.label ?? 'No appointment'}
-                </Text>
-                <ChevronRight size={18} color={colors.textSecondary} />
-              </View>
+              <Text style={styles.appointmentValue}>
+                {noteData.appointment?.label ?? 'No appointment'}
+              </Text>
+              {noteData.appointment && (
+                <Text style={styles.settingHint}>Read-only</Text>
+              )}
             </View>
-          </TouchableOpacity>
+          </View>
 
           <View style={[styles.settingRow, styles.settingRowLast]}>
             <View style={styles.settingContent}>
@@ -191,40 +186,7 @@ export default function NoteSetupScreen() {
         </View>
       </BottomSheet>
 
-      <BottomSheet
-        visible={appointmentSheetVisible}
-        onClose={() => setAppointmentSheetVisible(false)}
-      >
-        <View style={styles.sheetContent}>
-          <Text style={styles.sheetTitle}>Select Appointment</Text>
-          <TouchableOpacity
-            style={styles.sheetOption}
-            onPress={() => handleSelectAppointment(null)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.sheetOptionText}>No appointment</Text>
-            {noteData.appointment === null && (
-              <Check size={20} color={colors.primary} />
-            )}
-          </TouchableOpacity>
-          {patientAppointments.map(apt => (
-            <TouchableOpacity
-              key={apt.id}
-              style={styles.sheetOption}
-              onPress={() => handleSelectAppointment(apt)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.sheetOptionContent}>
-                <Text style={styles.sheetOptionText}>{apt.label}</Text>
-                <Text style={styles.sheetOptionSubtext}>{apt.type}</Text>
-              </View>
-              {noteData.appointment?.id === apt.id && (
-                <Check size={20} color={colors.primary} />
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-      </BottomSheet>
+
     </View>
   );
 }
@@ -301,6 +263,11 @@ const styles = StyleSheet.create({
   },
   settingPlaceholder: {
     color: colors.textSecondary,
+  },
+  appointmentValue: {
+    fontSize: 15,
+    color: colors.textPrimary,
+    marginTop: 4,
   },
   previewCard: {
     marginTop: spacing.md,
