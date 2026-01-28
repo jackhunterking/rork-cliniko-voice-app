@@ -18,8 +18,11 @@
       "bundleIdentifier": "app.rork.cliniko-voice-app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Cliniko Voice needs access to your microphone to transcribe your clinical notes in real-time.",
-        "UIBackgroundModes": ["audio"]
-      }
+        "UIBackgroundModes": [
+          "audio"
+        ]
+      },
+      "appleTeamId": "6G65A4B7Y5"
     },
     "android": {
       "adaptiveIcon": {

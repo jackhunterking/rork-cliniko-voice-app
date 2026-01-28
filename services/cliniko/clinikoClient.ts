@@ -32,6 +32,8 @@ function createBasicAuthHeader(apiKey: string): string {
 export interface ClinikoClientConfig {
   apiKey?: string;
   shard?: ClinikoShard;
+  /** If true, don't log errors for expected failures (like 401 during validation) */
+  suppressErrorLog?: boolean;
 }
 
 /**
@@ -177,11 +179,14 @@ export async function clinikoFetch<T>(
       ? (data as { errors: Record<string, string | string[]> }).errors
       : undefined;
 
-    errorCliniko(
-      `${method} ${endpoint} - ${response.status} ${response.statusText} (${formatDuration(duration)})`,
-      errorMessage,
-      errors ? `Validation errors: ${JSON.stringify(errors)}` : undefined
-    );
+    // Only log as error if not suppressed (e.g., during auto-detection where 401s are expected)
+    if (!config?.suppressErrorLog) {
+      errorCliniko(
+        `${method} ${endpoint} - ${response.status} ${response.statusText} (${formatDuration(duration)})`,
+        errorMessage,
+        errors ? `Validation errors: ${JSON.stringify(errors)}` : undefined
+      );
+    }
     
     recordClinikoApiCall({
       endpoint,
@@ -312,12 +317,13 @@ export async function validateClinikoCredentials(
   logCliniko(`Validating credentials for shard ${shard} [key: ${maskSecret(apiKey)}]`);
   
   try {
+    // Use suppressErrorLog to avoid red ERROR logs for expected 401s during auto-detection
     const response = await clinikoGet<{
       id: string;
       first_name: string;
       last_name: string;
       email: string;
-    }>('/user', { apiKey, shard });
+    }>('/user', { apiKey, shard, suppressErrorLog: true });
 
     logCliniko(`Credentials valid - user: ${response.first_name} ${response.last_name}`);
     

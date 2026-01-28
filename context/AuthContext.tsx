@@ -33,6 +33,9 @@ export interface AuthActions {
 // Create the redirect URI for deep linking
 const redirectTo = makeRedirectUri();
 
+// Log the redirect URI for debugging
+console.log('[Auth] Redirect URI configured:', redirectTo);
+
 export const [AuthProvider, useAuth] = createContextHook(() => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -70,89 +73,128 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     return true;
   }, [queryClient]);
 
-  // Handle deep link URL to create session
+  // Helper function to handle session setup (reused in multiple places)
+  // MUST be defined before createSessionFromUrl since it's used there
+  const handleSessionEstablished = useCallback(async (sessionUser: User) => {
+    logAuth('Handling session for user:', sessionUser.email);
+    
+    // Validate Cliniko credentials
+    const isValid = await validateClinikoCredentialOwnership(sessionUser.id);
+    
+    if (isValid) {
+      let isConfigured = await isClinikoConfigured();
+      
+      // If no local credentials, try to restore from backend
+      if (!isConfigured) {
+        logAuth('No local credentials found - checking backend...');
+        const restored = await restoreCredentialsFromBackend(sessionUser.id);
+        if (restored) {
+          logAuth('Credentials restored from backend');
+          isConfigured = true;
+        } else {
+          logAuth('No credentials in backend either');
+        }
+      }
+      
+      logAuth(`Cliniko configured: ${isConfigured}`);
+      setHasClinikoKey(isConfigured);
+    }
+  }, [validateClinikoCredentialOwnership]);
+
+  // Handle deep link URL to create session (used when app is ALREADY running)
   const createSessionFromUrl = useCallback(async (url: string) => {
     try {
+      logAuth('Processing deep link URL (app running):', url.substring(0, 100) + '...');
+      
       const { params, errorCode } = QueryParams.getQueryParams(url);
 
       if (errorCode) {
-        console.error('Deep link error:', errorCode);
+        errorAuth('Deep link error code:', errorCode);
         return;
       }
 
       const { access_token, refresh_token } = params;
+      
+      logAuth('Deep link params:', { 
+        hasAccessToken: !!access_token, 
+        hasRefreshToken: !!refresh_token,
+      });
 
       if (!access_token || !refresh_token) {
+        logAuth('No tokens in URL, skipping');
         return;
       }
 
+      logAuth('Setting session from deep link tokens...');
       const { data, error } = await supabase.auth.setSession({
         access_token,
         refresh_token,
       });
 
       if (error) {
-        console.error('Error setting session from URL:', error);
+        errorAuth('Error setting session from URL:', error);
         return;
       }
 
       if (data.session) {
+        logAuth('Session created for user:', data.session.user.email);
         setSession(data.session);
         setUser(data.session.user);
-        
-        // Validate Cliniko credentials belong to this user
-        await validateClinikoCredentialOwnership(data.session.user.id);
-        await refreshClinikoKeyStatus();
+        await handleSessionEstablished(data.session.user);
       }
     } catch (error) {
-      console.error('Error processing deep link:', error);
+      errorAuth('Error processing deep link:', error);
     }
-  }, [refreshClinikoKeyStatus, validateClinikoCredentialOwnership]);
+  }, [handleSessionEstablished]);
 
   // Initialize auth state and handle deep links
   useEffect(() => {
     let mounted = true;
 
     const initializeAuth = async () => {
-      logAuth('Initializing auth - checking session...');
+      logAuth('Initializing auth...');
       try {
-        // Get initial session
+        // FIRST: Check for deep link URL with auth tokens
+        // This must happen BEFORE we check session state
+        const initialUrl = await Linking.getInitialURL();
+        logAuth('Initial URL:', initialUrl ? initialUrl.substring(0, 100) + '...' : 'none');
+        
+        if (initialUrl) {
+          const { params } = QueryParams.getQueryParams(initialUrl);
+          if (params.access_token && params.refresh_token) {
+            logAuth('Found auth tokens in initial URL, setting session...');
+            const { data, error } = await supabase.auth.setSession({
+              access_token: params.access_token,
+              refresh_token: params.refresh_token,
+            });
+            
+            if (error) {
+              errorAuth('Error setting session from initial URL:', error);
+            } else if (data.session && mounted) {
+              logAuth('Session created from deep link for user:', data.session.user.email);
+              setSession(data.session);
+              setUser(data.session.user);
+              await handleSessionEstablished(data.session.user);
+              setIsLoading(false);
+              return; // Done - session established from deep link
+            }
+          }
+        }
+        
+        // THEN: Check for existing session (if no deep link tokens)
+        logAuth('Checking for existing session...');
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (mounted) {
           if (initialSession?.user) {
             logAuth(`Session found for user: ${maskSecret(initialSession.user.id)} (${initialSession.user.email})`);
+            setSession(initialSession);
+            setUser(initialSession.user);
+            await handleSessionEstablished(initialSession.user);
           } else {
             logAuth('No session found - user not authenticated');
-          }
-          
-          setSession(initialSession);
-          setUser(initialSession?.user ?? null);
-          
-          // Check Cliniko key if user is authenticated
-          if (initialSession?.user) {
-            logAuth('Checking Cliniko credentials coupling...');
-            // First validate ownership
-            const isValid = await validateClinikoCredentialOwnership(initialSession.user.id);
-            
-            if (isValid) {
-              let isConfigured = await isClinikoConfigured();
-              
-              // If no local credentials, try to restore from backend
-              if (!isConfigured) {
-                logAuth('No local credentials found - checking backend...');
-                const restored = await restoreCredentialsFromBackend(initialSession.user.id);
-                if (restored) {
-                  logAuth('Credentials restored from backend');
-                  isConfigured = true;
-                } else {
-                  logAuth('No credentials in backend either');
-                }
-              }
-              
-              logAuth(`Cliniko configured: ${isConfigured}`);
-              setHasClinikoKey(isConfigured);
-            }
+            setSession(null);
+            setUser(null);
           }
           
           logAuth('Auth initialization complete');
@@ -168,9 +210,15 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
     initializeAuth();
 
-    // Subscribe to auth state changes
+    // Subscribe to auth state changes (for subsequent auth events, not initial)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
+        // Skip during initial load - we handle that in initializeAuth
+        if (isLoading) {
+          logAuth(`Auth state changed during init (${event}), skipping handler`);
+          return;
+        }
+        
         logAuth(`Auth state changed: ${event}`);
         
         if (mounted) {
@@ -179,46 +227,24 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
           
           if (newSession?.user) {
             logAuth(`New session for user: ${maskSecret(newUserId!)} (${newSession.user.email})`);
-          } else {
-            logAuth('Session ended - user signed out');
-          }
-          
-          setSession(newSession);
-          setUser(newSession?.user ?? null);
-          
-          if (newSession?.user) {
+            setSession(newSession);
+            setUser(newSession.user);
+            
             // Check if user changed
             if (previousUserId && previousUserId !== newUserId) {
               logAuth(`User changed from ${maskSecret(previousUserId)} to ${maskSecret(newUserId!)} - clearing previous Cliniko data`);
               await clearAllClinikoData();
               queryClient.removeQueries({ queryKey: clinikoKeys.all });
               setHasClinikoKey(false);
-            } else {
-              // Same user or new login, validate credentials
-              logAuth('Same user or new login - validating Cliniko credentials');
-              const isValid = await validateClinikoCredentialOwnership(newSession.user.id);
-              if (isValid) {
-                let isConfigured = await isClinikoConfigured();
-                
-                // If no local credentials, try to restore from backend
-                if (!isConfigured) {
-                  logAuth('No local credentials found - checking backend...');
-                  const restored = await restoreCredentialsFromBackend(newSession.user.id);
-                  if (restored) {
-                    logAuth('Credentials restored from backend');
-                    isConfigured = true;
-                  } else {
-                    logAuth('No credentials in backend either');
-                  }
-                }
-                
-                logAuth(`Cliniko configured: ${isConfigured}`);
-                setHasClinikoKey(isConfigured);
-              }
             }
+            
+            // Handle new session
+            await handleSessionEstablished(newSession.user);
           } else {
             // User signed out
-            logAuth('Resetting hasClinikoKey to false');
+            logAuth('Session ended - user signed out');
+            setSession(null);
+            setUser(null);
             setHasClinikoKey(false);
           }
         }
@@ -231,22 +257,16 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     };
   }, [validateClinikoCredentialOwnership]);
 
-  // Handle deep links when app is opened via URL
+  // Handle deep links when app is ALREADY OPEN (not cold start)
+  // Cold start deep links are handled in initializeAuth above
   useEffect(() => {
-    // Handle URL when app is already open
     const handleUrl = (event: { url: string }) => {
+      logAuth('Deep link received (app already open):', event.url.substring(0, 100));
       createSessionFromUrl(event.url);
     };
 
-    // Listen for incoming links
+    // Listen for incoming links while app is running
     const subscription = Linking.addEventListener('url', handleUrl);
-
-    // Check if app was opened with a URL
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        createSessionFromUrl(url);
-      }
-    });
 
     return () => {
       subscription.remove();
@@ -288,21 +308,32 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   );
 
   const signOut = useCallback(async () => {
-    logAuth('Signing out - clearing all Cliniko data...');
+    logAuth('Signing out...');
     
-    // Clear Cliniko credentials from secure storage
-    await clearAllClinikoData();
-    logAuth('Cliniko credentials cleared from secure storage');
+    // Immediately clear local state for instant UI feedback
+    setSession(null);
+    setUser(null);
+    setHasClinikoKey(false);
+    logAuth('Local session cleared');
     
-    // Clear all Cliniko-related cache
+    // Clear Cliniko-related cache (synchronous)
     queryClient.removeQueries({ queryKey: clinikoKeys.all });
     logAuth('Cliniko cache cleared');
     
-    setHasClinikoKey(false);
+    // Fire Supabase sign out in background (don't wait for it)
+    supabase.auth.signOut().then(() => {
+      logAuth('Supabase sign out complete');
+    }).catch((err) => {
+      // Network error is fine - local session is already cleared
+      logAuth('Supabase sign out background call failed (ignored):', err);
+    });
     
-    // Sign out from Supabase
-    await supabase.auth.signOut();
-    logAuth('Supabase sign out complete');
+    // Clear Cliniko credentials in background (don't block UI)
+    clearAllClinikoData().then(() => {
+      logAuth('Cliniko credentials cleared');
+    }).catch((err) => {
+      errorAuth('Failed to clear Cliniko data:', err);
+    });
   }, [queryClient]);
 
   return {

@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { supabase } from './supabase';
 
 // Storage keys
 const CLINIKO_API_KEY = 'cliniko_api_key';
@@ -174,35 +173,35 @@ export async function saveClinikoCredentials(
 // ============================================================================
 
 /**
- * Get the current session's access token for Edge Function calls
- */
-async function getAccessToken(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token ?? null;
-}
-
-/**
  * Save Cliniko credentials to Supabase backend
  * This allows users to recover their credentials on a new device
+ * 
+ * @param apiKey - The Cliniko API key
+ * @param shard - The Cliniko shard/region
+ * @param userId - The Supabase user ID
  */
 export async function saveCredentialsToBackend(
   apiKey: string,
-  shard: ClinikoShard
+  shard: ClinikoShard,
+  userId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      console.warn('[SecureStorage] No access token - skipping backend sync');
-      return { success: false, error: 'Not authenticated' };
+    if (!userId) {
+      console.warn('[SecureStorage] No user ID - skipping backend sync');
+      return { success: false, error: 'No user ID' };
+    }
+
+    if (!SUPABASE_FUNCTIONS_URL) {
+      console.warn('[SecureStorage] Supabase Functions URL not configured - skipping backend sync');
+      return { success: true }; // Not an error, just not configured
     }
 
     const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/cliniko-credentials-save`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ api_key: apiKey, shard }),
+      body: JSON.stringify({ user_id: userId, api_key: apiKey, shard }),
     });
 
     const result = await response.json();
@@ -223,17 +222,18 @@ export async function saveCredentialsToBackend(
 /**
  * Fetch Cliniko credentials from Supabase backend
  * Used when user logs in on a new device to restore their connection
+ * 
+ * @param userId - The Supabase user ID to fetch credentials for
  */
-export async function fetchCredentialsFromBackend(): Promise<{
+export async function fetchCredentialsFromBackend(userId: string): Promise<{
   success: boolean;
   data?: { api_key: string; shard: ClinikoShard } | null;
   error?: string;
 }> {
   try {
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      console.warn('[SecureStorage] No access token - cannot fetch from backend');
-      return { success: false, error: 'Not authenticated' };
+    if (!userId) {
+      console.warn('[SecureStorage] No user ID provided - cannot fetch from backend');
+      return { success: false, error: 'No user ID' };
     }
 
     // Check if Edge Functions URL is configured
@@ -242,10 +242,13 @@ export async function fetchCredentialsFromBackend(): Promise<{
       return { success: true, data: null }; // Return success with no data (expected when not configured)
     }
 
-    const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/cliniko-credentials-get`, {
+    // Pass user_id as query parameter (no JWT needed)
+    const url = `${SUPABASE_FUNCTIONS_URL}/cliniko-credentials-get?user_id=${encodeURIComponent(userId)}`;
+    console.log('[SecureStorage] Fetching credentials from backend for user:', userId.slice(0, 8) + '...');
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
     });
@@ -283,21 +286,27 @@ export async function fetchCredentialsFromBackend(): Promise<{
 /**
  * Delete Cliniko credentials from Supabase backend
  * Called when user disconnects Cliniko
+ * 
+ * @param userId - The Supabase user ID
  */
-export async function deleteCredentialsFromBackend(): Promise<{ success: boolean; error?: string }> {
+export async function deleteCredentialsFromBackend(userId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      console.warn('[SecureStorage] No access token - skipping backend delete');
-      return { success: false, error: 'Not authenticated' };
+    if (!userId) {
+      console.warn('[SecureStorage] No user ID - skipping backend delete');
+      return { success: false, error: 'No user ID' };
+    }
+
+    if (!SUPABASE_FUNCTIONS_URL) {
+      console.warn('[SecureStorage] Supabase Functions URL not configured - skipping backend delete');
+      return { success: true }; // Not an error, just not configured
     }
 
     const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/cliniko-credentials-delete`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({ user_id: userId }),
     });
 
     const result = await response.json();
@@ -320,9 +329,11 @@ export async function deleteCredentialsFromBackend(): Promise<{ success: boolean
  * Returns true if credentials were found and restored
  */
 export async function restoreCredentialsFromBackend(userId: string): Promise<boolean> {
-  const result = await fetchCredentialsFromBackend();
+  console.log('[SecureStorage] Attempting to restore credentials from backend...');
+  const result = await fetchCredentialsFromBackend(userId);
   
   if (!result.success || !result.data) {
+    console.log('[SecureStorage] No credentials to restore:', result.error || 'no data');
     return false;
   }
 
@@ -350,7 +361,7 @@ export async function saveClinikoCredentialsWithBackup(
   await saveClinikoCredentials(apiKey, shard, userId);
   
   // Then sync to backend (fire and forget, don't block on this)
-  saveCredentialsToBackend(apiKey, shard).catch((err) => {
+  saveCredentialsToBackend(apiKey, shard, userId).catch((err) => {
     console.warn('[SecureStorage] Background backend sync failed:', err);
   });
 }

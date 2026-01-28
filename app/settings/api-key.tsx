@@ -151,9 +151,11 @@ export default function ApiKeyScreen() {
               await clearAllClinikoData();
               
               // Delete from backend (fire and forget)
-              deleteCredentialsFromBackend().catch((err) => {
-                console.warn('Failed to delete from backend:', err);
-              });
+              if (user?.id) {
+                deleteCredentialsFromBackend(user.id).catch((err) => {
+                  console.warn('Failed to delete from backend:', err);
+                });
+              }
               
               // Clear cache
               clinikoCache.clearAll();
@@ -331,7 +333,7 @@ export default function ApiKeyScreen() {
         </TouchableOpacity>
 
         <Text style={styles.footnote}>
-          Your API key is stored securely on your device and never sent to our servers.
+          Your API key is stored securely and synced to enable login on multiple devices.
         </Text>
       </ScrollView>
 
