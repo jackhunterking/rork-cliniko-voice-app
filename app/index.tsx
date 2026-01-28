@@ -3,29 +3,15 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '@/constants/colors';
 
-// Mock auth state flags - default to unauthenticated
-const isAuthed = false;
-const isClinikoConnected = false;
-
 export default function IndexRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    const redirect = () => {
-      if (!isAuthed) {
-        console.log('User not authenticated, redirecting to auth/welcome');
-        router.replace('/(tabs)/home');
-      } else if (!isClinikoConnected) {
-        console.log('User authenticated but not connected to Cliniko');
-        router.replace('/(tabs)/home');
-      } else {
-        console.log('User authenticated and connected, redirecting to home');
-        router.replace('/(tabs)/home');
-      }
-    };
-
-    // Small delay to ensure router is ready
-    const timeout = setTimeout(redirect, 100);
+    // Redirect to splash screen immediately
+    const timeout = setTimeout(() => {
+      console.log('Redirecting to splash screen');
+      router.replace('/splash');
+    }, 50);
     return () => clearTimeout(timeout);
   }, [router]);
 
