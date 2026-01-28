@@ -6,28 +6,38 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   User,
-  Settings,
-  Bell,
+  Key,
   HelpCircle,
   LogOut,
   ChevronRight,
-  Building2,
+  Lightbulb,
+  Trash2,
 } from 'lucide-react-native';
 import { colors, spacing, radius } from '@/constants/colors';
 
 interface MenuItemProps {
   icon: React.ReactNode;
   label: string;
+  subtitle?: string;
   onPress?: () => void;
   showChevron?: boolean;
   destructive?: boolean;
+  statusDot?: 'green' | 'red';
 }
 
-function MenuItem({ icon, label, onPress, showChevron = true, destructive = false }: MenuItemProps) {
+function MenuItem({ 
+  icon, 
+  label, 
+  subtitle,
+  onPress, 
+  showChevron = true, 
+  destructive = false,
+  statusDot,
+}: MenuItemProps) {
   return (
     <TouchableOpacity
       style={styles.menuItem}
@@ -36,23 +46,41 @@ function MenuItem({ icon, label, onPress, showChevron = true, destructive = fals
     >
       <View style={styles.menuItemLeft}>
         {icon}
-        <Text style={[styles.menuItemLabel, destructive && styles.destructiveText]}>
-          {label}
-        </Text>
+        <View style={styles.menuItemTextContainer}>
+          <Text style={[styles.menuItemLabel, destructive && styles.destructiveText]}>
+            {label}
+          </Text>
+          {subtitle && (
+            <View style={styles.subtitleRow}>
+              {statusDot && (
+                <View style={[
+                  styles.statusDot,
+                  statusDot === 'green' ? styles.statusDotGreen : styles.statusDotRed
+                ]} />
+              )}
+              <Text style={styles.menuItemSubtitle}>{subtitle}</Text>
+            </View>
+          )}
+        </View>
       </View>
       {showChevron && <ChevronRight size={20} color={colors.textSecondary} />}
     </TouchableOpacity>
   );
 }
 
-export default function ProfileScreen() {
+export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  const handleSignOut = () => {
+    console.log('Sign Out');
+  };
 
   return (
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: 'Profile',
+          title: 'Settings',
           headerLargeTitle: true,
           headerShadowVisible: false,
           headerStyle: { backgroundColor: colors.background },
@@ -66,46 +94,58 @@ export default function ProfileScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.profileCard}>
+        <TouchableOpacity 
+          style={styles.profileCard}
+          activeOpacity={0.7}
+          onPress={() => console.log('Profile details')}
+        >
           <View style={styles.avatar}>
-            <User size={32} color={colors.primary} />
+            <User size={28} color={colors.primary} />
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>Dr. Sarah Mitchell</Text>
             <Text style={styles.profileEmail}>sarah.mitchell@clinic.com</Text>
           </View>
-        </View>
+          <ChevronRight size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cliniko Account</Text>
+          <Text style={styles.sectionTitle}>Cliniko</Text>
           <View style={styles.menuCard}>
             <MenuItem
-              icon={<Building2 size={20} color={colors.textSecondary} />}
-              label="Practice Settings"
-              onPress={() => console.log('Practice Settings')}
-            />
-            <View style={styles.separator} />
-            <MenuItem
-              icon={<Settings size={20} color={colors.textSecondary} />}
-              label="App Preferences"
-              onPress={() => console.log('App Preferences')}
+              icon={<Key size={20} color={colors.textSecondary} />}
+              label="Cliniko API Key"
+              subtitle="Connected"
+              statusDot="green"
+              onPress={() => router.push('/settings/api-key' as any)}
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>General</Text>
+          <Text style={styles.sectionTitle}>Support</Text>
           <View style={styles.menuCard}>
-            <MenuItem
-              icon={<Bell size={20} color={colors.textSecondary} />}
-              label="Notifications"
-              onPress={() => console.log('Notifications')}
-            />
-            <View style={styles.separator} />
             <MenuItem
               icon={<HelpCircle size={20} color={colors.textSecondary} />}
               label="Help & Support"
-              onPress={() => console.log('Help')}
+              onPress={() => router.push('/settings/help' as any)}
+            />
+            <View style={styles.separator} />
+            <MenuItem
+              icon={<Lightbulb size={20} color={colors.textSecondary} />}
+              label="Request a feature"
+              onPress={() => router.push('/settings/feature-request' as any)}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Privacy</Text>
+          <View style={styles.menuCard}>
+            <MenuItem
+              icon={<Trash2 size={20} color={colors.textSecondary} />}
+              label="Delete my data"
+              onPress={() => router.push('/settings/delete-data' as any)}
             />
           </View>
         </View>
@@ -114,8 +154,8 @@ export default function ProfileScreen() {
           <View style={styles.menuCard}>
             <MenuItem
               icon={<LogOut size={20} color={colors.error} />}
-              label="Sign Out"
-              onPress={() => console.log('Sign Out')}
+              label="Sign out"
+              onPress={handleSignOut}
               showChevron={false}
               destructive
             />
@@ -146,21 +186,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.background,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   profileInfo: {
     marginLeft: spacing.md,
     flex: 1,
   },
   profileName: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600' as const,
     color: colors.textPrimary,
   },
@@ -197,11 +235,37 @@ const styles = StyleSheet.create({
   menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+  },
+  menuItemTextContainer: {
+    marginLeft: spacing.sm + 4,
+    flex: 1,
   },
   menuItemLabel: {
     fontSize: 16,
     color: colors.textPrimary,
-    marginLeft: spacing.sm + 4,
+  },
+  menuItemSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 1,
+  },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusDotGreen: {
+    backgroundColor: colors.success,
+  },
+  statusDotRed: {
+    backgroundColor: colors.error,
   },
   destructiveText: {
     color: colors.error,
