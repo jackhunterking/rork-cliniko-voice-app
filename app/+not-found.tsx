@@ -1,8 +1,14 @@
-import { Link, Stack } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { Stack, useRouter } from "expo-router";
+import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
 import { colors, spacing } from "@/constants/colors";
 
 export default function NotFoundScreen() {
+  const router = useRouter();
+
+  const handleBackToPatients = () => {
+    router.replace('/(tabs)/patients');
+  };
+
   return (
     <>
       <Stack.Screen options={{ title: "Not Found" }} />
@@ -10,9 +16,9 @@ export default function NotFoundScreen() {
         <Text style={styles.title}>Page not found</Text>
         <Text style={styles.subtitle}>The page you are looking for does not exist.</Text>
 
-        <Link href="/(tabs)/home" style={styles.link}>
+        <TouchableOpacity style={styles.link} onPress={handleBackToPatients}>
           <Text style={styles.linkText}>Back to patients</Text>
-        </Link>
+        </TouchableOpacity>
       </View>
     </>
   );
