@@ -89,45 +89,39 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick actions</Text>
           
-          <View style={styles.quickActionsCard}>
-            <View style={[styles.quickActionRow, styles.disabledRow]}>
-              <View style={[styles.quickActionIcon, styles.disabledIcon]}>
-                <FileText size={18} color={colors.textSecondary} />
-              </View>
-              <View style={styles.quickActionContent}>
-                <Text style={[styles.quickActionTitle, styles.disabledText]}>
-                  Resume last draft
-                </Text>
-                <Text style={styles.quickActionSubtitle}>Coming soon</Text>
-              </View>
+          <View style={[styles.quickActionCard, styles.disabledCard]}>
+            <View style={styles.quickActionIcon}>
+              <FileText size={18} color={colors.textSecondary} />
             </View>
-
-            <View style={styles.divider} />
-
-            <View style={[styles.quickActionRow, styles.disabledRow]}>
-              <View style={[styles.quickActionIcon, styles.disabledIcon]}>
-                <Users size={18} color={colors.textSecondary} />
-              </View>
-              <View style={styles.quickActionContent}>
-                <Text style={[styles.quickActionTitle, styles.disabledText]}>
-                  Recent patients
-                </Text>
-                <Text style={styles.quickActionSubtitle}>Coming soon</Text>
-              </View>
+            <View style={styles.quickActionContent}>
+              <Text style={[styles.quickActionTitle, styles.disabledText]}>
+                Resume last draft
+              </Text>
+              <Text style={styles.quickActionSubtitle}>Coming soon</Text>
             </View>
+          </View>
 
-            <View style={styles.divider} />
+          <View style={[styles.quickActionCard, styles.disabledCard]}>
+            <View style={styles.quickActionIcon}>
+              <Users size={18} color={colors.textSecondary} />
+            </View>
+            <View style={styles.quickActionContent}>
+              <Text style={[styles.quickActionTitle, styles.disabledText]}>
+                Recent patients
+              </Text>
+              <Text style={styles.quickActionSubtitle}>Coming soon</Text>
+            </View>
+          </View>
 
-            <View style={[styles.quickActionRow, styles.disabledRow]}>
-              <View style={[styles.quickActionIcon, styles.disabledIcon]}>
-                <LayoutTemplate size={18} color={colors.textSecondary} />
-              </View>
-              <View style={styles.quickActionContent}>
-                <Text style={[styles.quickActionTitle, styles.disabledText]}>
-                  Templates
-                </Text>
-                <Text style={styles.quickActionSubtitle}>Coming soon</Text>
-              </View>
+          <View style={[styles.quickActionCard, styles.disabledCard]}>
+            <View style={styles.quickActionIcon}>
+              <LayoutTemplate size={18} color={colors.textSecondary} />
+            </View>
+            <View style={styles.quickActionContent}>
+              <Text style={[styles.quickActionTitle, styles.disabledText]}>
+                Templates
+              </Text>
+              <Text style={styles.quickActionSubtitle}>Coming soon</Text>
             </View>
           </View>
         </View>
@@ -267,23 +261,21 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginLeft: spacing.xs,
   },
-  quickActionsCard: {
+  quickActionCard: {
     backgroundColor: colors.background,
     borderRadius: radius.md,
-    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 1,
   },
-  quickActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: spacing.md,
-  },
-  disabledRow: {
+  disabledCard: {
     opacity: 0.5,
   },
   quickActionIcon: {
@@ -294,9 +286,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
-  },
-  disabledIcon: {
-    backgroundColor: colors.backgroundSecondary,
   },
   quickActionContent: {
     flex: 1,
@@ -313,11 +302,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: 2,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginLeft: 64,
   },
   sheetContent: {
     paddingHorizontal: spacing.md,
