@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Calendar, FileText, ChevronRight } from 'lucide-react-native';
+import { Calendar, FileText } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Card } from '@/components/Card';
@@ -67,22 +67,18 @@ export default function PatientDetailScreen() {
           </View>
           {appointments.length > 0 ? (
             appointments.map((apt, index) => (
-              <TouchableOpacity
+              <View
                 key={apt.id}
                 style={[
                   styles.appointmentRow,
                   index < appointments.length - 1 && styles.appointmentRowBorder,
                 ]}
-                activeOpacity={0.7}
               >
-                <View style={styles.appointmentInfo}>
-                  <Text style={styles.appointmentTime}>
-                    {formatAppointmentDateTime(apt.datetime)}
-                  </Text>
-                  <Text style={styles.appointmentType}>{apt.type}</Text>
-                </View>
-                <ChevronRight size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
+                <Text style={styles.appointmentTime}>
+                  {formatAppointmentDateTime(apt.datetime)}
+                </Text>
+                <Text style={styles.appointmentType}>{apt.type}</Text>
+              </View>
             ))
           ) : (
             <Text style={styles.emptyCardText}>No upcoming appointments</Text>
@@ -94,23 +90,17 @@ export default function PatientDetailScreen() {
             <FileText size={18} color={colors.primary} />
             <Text style={styles.cardTitle}>Previous Notes</Text>
           </View>
-          <TouchableOpacity style={styles.noteRow} activeOpacity={0.7}>
-            <View style={styles.noteInfo}>
-              <Text style={styles.noteDate}>
-                {formatDate(patient.lastAppointment)}
-              </Text>
-              <Text style={styles.noteType}>Standard Treatment Note</Text>
-            </View>
-            <ChevronRight size={18} color={colors.textSecondary} />
-          </TouchableOpacity>
+          <View style={styles.noteRow}>
+            <Text style={styles.noteDate}>
+              {formatDate(patient.lastAppointment)}
+            </Text>
+            <Text style={styles.noteType}>Standard Treatment Note</Text>
+          </View>
           {patient.lastAppointment && (
-            <TouchableOpacity style={styles.noteRow} activeOpacity={0.7}>
-              <View style={styles.noteInfo}>
-                <Text style={styles.noteDate}>15 Jan 2026</Text>
-                <Text style={styles.noteType}>Follow-up Note</Text>
-              </View>
-              <ChevronRight size={18} color={colors.textSecondary} />
-            </TouchableOpacity>
+            <View style={styles.noteRow}>
+              <Text style={styles.noteDate}>15 Jan 2026</Text>
+              <Text style={styles.noteType}>Follow-up Note</Text>
+            </View>
           )}
         </Card>
 
@@ -162,17 +152,13 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   appointmentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingVertical: spacing.sm,
   },
   appointmentRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  appointmentInfo: {
-    flex: 1,
-  },
+
   appointmentTime: {
     fontSize: 16,
     color: colors.textPrimary,
@@ -183,14 +169,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   noteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
-  },
-  noteInfo: {
-    flex: 1,
   },
   noteDate: {
     fontSize: 16,
