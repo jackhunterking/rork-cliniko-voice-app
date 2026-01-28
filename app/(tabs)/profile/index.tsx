@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  Switch,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,8 +19,12 @@ import {
   ChevronRight,
   Lightbulb,
   Trash2,
+  ShieldCheck,
+  Info,
 } from 'lucide-react-native';
 import { colors, spacing, radius } from '@/constants/colors';
+import { useAuth } from '@/context/AuthContext';
+import { useSettingsStore } from '@/stores/settings-store';
 
 interface MenuItemProps {
   icon: React.ReactNode;
@@ -27,6 +34,7 @@ interface MenuItemProps {
   showChevron?: boolean;
   destructive?: boolean;
   statusDot?: 'green' | 'red';
+  disabled?: boolean;
 }
 
 function MenuItem({ 
@@ -37,12 +45,14 @@ function MenuItem({
   showChevron = true, 
   destructive = false,
   statusDot,
+  disabled = false,
 }: MenuItemProps) {
   return (
     <TouchableOpacity
-      style={styles.menuItem}
+      style={[styles.menuItem, disabled && styles.menuItemDisabled]}
       onPress={onPress}
       activeOpacity={0.7}
+      disabled={disabled}
     >
       <View style={styles.menuItemLeft}>
         {icon}
@@ -71,9 +81,60 @@ function MenuItem({
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user, signOut, hasClinikoKey } = useAuth();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const { medicalModeEnabled, toggleMedicalMode } = useSettingsStore();
+
+  // Get user display info
+  const displayName = user?.user_metadata?.full_name || 'User';
+  const displayEmail = user?.email || '';
+
+  // Handle medical mode toggle with confirmation
+  const handleMedicalModeToggle = () => {
+    if (!medicalModeEnabled) {
+      Alert.alert(
+        'Enable Medical Mode',
+        'Medical mode enables PII (Personal Identifiable Information) redaction in transcriptions.\n\nOnly enable this if you have the correct compliance agreements in place for handling medical data.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Enable',
+            onPress: toggleMedicalMode,
+          },
+        ]
+      );
+    } else {
+      toggleMedicalMode();
+    }
+  };
 
   const handleSignOut = () => {
-    console.log('Sign Out');
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out? Your Cliniko API key will also be removed from this device.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            setIsSigningOut(true);
+            try {
+              await signOut();
+              // Navigation is handled by AuthGuard
+            } catch (error) {
+              console.error('Sign out error:', error);
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            } finally {
+              setIsSigningOut(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -103,8 +164,8 @@ export default function SettingsScreen() {
             <User size={28} color={colors.primary} />
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>Dr. Sarah Mitchell</Text>
-            <Text style={styles.profileEmail}>sarah.mitchell@clinic.com</Text>
+            <Text style={styles.profileName}>{displayName}</Text>
+            <Text style={styles.profileEmail}>{displayEmail}</Text>
           </View>
           <ChevronRight size={20} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -115,11 +176,40 @@ export default function SettingsScreen() {
             <MenuItem
               icon={<Key size={20} color={colors.textSecondary} />}
               label="Cliniko API Key"
-              subtitle="Connected"
-              statusDot="green"
-              onPress={() => router.push('/settings/api-key' as any)}
+              subtitle={hasClinikoKey ? "Connected" : "Not connected"}
+              statusDot={hasClinikoKey ? "green" : "red"}
+              onPress={() => router.push('/settings/api-key')}
             />
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Transcription</Text>
+          <View style={styles.menuCard}>
+            <View style={styles.toggleMenuItem}>
+              <View style={styles.menuItemLeft}>
+                <ShieldCheck size={20} color={medicalModeEnabled ? colors.success : colors.textSecondary} />
+                <View style={styles.menuItemTextContainer}>
+                  <Text style={styles.menuItemLabel}>Medical Mode</Text>
+                  <View style={styles.subtitleRow}>
+                    <Info size={12} color={colors.textSecondary} style={styles.infoIcon} />
+                    <Text style={styles.menuItemSubtitle}>
+                      PII redaction for compliance
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <Switch
+                value={medicalModeEnabled}
+                onValueChange={handleMedicalModeToggle}
+                trackColor={{ false: colors.border, true: colors.success }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+          </View>
+          <Text style={styles.sectionFootnote}>
+            Enable only if you have compliance agreements in place.
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -128,13 +218,13 @@ export default function SettingsScreen() {
             <MenuItem
               icon={<HelpCircle size={20} color={colors.textSecondary} />}
               label="Help & Support"
-              onPress={() => router.push('/settings/help' as any)}
+              onPress={() => router.push('/settings/help')}
             />
             <View style={styles.separator} />
             <MenuItem
               icon={<Lightbulb size={20} color={colors.textSecondary} />}
               label="Request a feature"
-              onPress={() => router.push('/settings/feature-request' as any)}
+              onPress={() => router.push('/settings/feature-request')}
             />
           </View>
         </View>
@@ -145,7 +235,7 @@ export default function SettingsScreen() {
             <MenuItem
               icon={<Trash2 size={20} color={colors.textSecondary} />}
               label="Delete my data"
-              onPress={() => router.push('/settings/delete-data' as any)}
+              onPress={() => router.push('/settings/delete-data')}
             />
           </View>
         </View>
@@ -153,11 +243,16 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <View style={styles.menuCard}>
             <MenuItem
-              icon={<LogOut size={20} color={colors.error} />}
-              label="Sign out"
+              icon={isSigningOut ? (
+                <ActivityIndicator size={20} color={colors.error} />
+              ) : (
+                <LogOut size={20} color={colors.error} />
+              )}
+              label={isSigningOut ? "Signing out..." : "Sign out"}
               onPress={handleSignOut}
               showChevron={false}
               destructive
+              disabled={isSigningOut}
             />
           </View>
         </View>
@@ -232,6 +327,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: spacing.md,
   },
+  menuItemDisabled: {
+    opacity: 0.6,
+  },
   menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -274,6 +372,23 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.border,
     marginLeft: spacing.md + 20 + spacing.sm + 4,
+  },
+  toggleMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+  },
+  infoIcon: {
+    marginRight: 4,
+  },
+  sectionFootnote: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.xs,
+    fontStyle: 'italic',
   },
   version: {
     fontSize: 13,

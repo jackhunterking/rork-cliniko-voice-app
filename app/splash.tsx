@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import {
   View,
   Text,
@@ -6,28 +6,15 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Mic } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 
+/**
+ * Splash screen component - displays app branding during load.
+ * Navigation is handled by AuthGuard in _layout.tsx, not here.
+ */
 export default function SplashScreen() {
-  const router = useRouter();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
-
-    const timeout = setTimeout(() => {
-      console.log('Splash complete, navigating to auth/welcome');
-      router.replace('/auth/welcome');
-    }, 1500);
-
-    return () => clearTimeout(timeout);
-  }, [router, fadeAnim]);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   return (
     <View style={styles.container}>
