@@ -2,7 +2,7 @@ import React from 'react';
 import { Stack } from 'expo-router';
 import { colors } from '@/constants/colors';
 
-export default function NewNoteLayout() {
+export default function QuickLayout() {
   return (
     <Stack
       screenOptions={{
@@ -13,7 +13,7 @@ export default function NewNoteLayout() {
         contentStyle: { backgroundColor: colors.background },
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'New Note' }} />
+      <Stack.Screen name="index" options={{ title: 'Quick' }} />
     </Stack>
   );
 }

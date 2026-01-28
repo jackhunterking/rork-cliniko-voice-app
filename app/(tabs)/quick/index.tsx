@@ -7,14 +7,14 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { ChevronRight, FileText } from 'lucide-react-native';
+import { ChevronRight, Zap } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SearchBar } from '@/components/SearchBar';
 import { colors, spacing, radius } from '@/constants/colors';
 import { patients, formatDate, Patient } from '@/mocks/patients';
 import { useNote } from '@/context/NoteContext';
 
-export default function NewNoteScreen() {
+export default function QuickScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
@@ -52,7 +52,7 @@ export default function NewNoteScreen() {
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: 'New Note',
+          title: 'Quick',
           headerLargeTitle: true,
           headerShadowVisible: false,
           headerStyle: { backgroundColor: colors.background },
@@ -61,11 +61,11 @@ export default function NewNoteScreen() {
       
       <View style={styles.header}>
         <View style={styles.iconContainer}>
-          <FileText size={24} color={colors.primary} />
+          <Zap size={24} color={colors.primary} />
         </View>
-        <Text style={styles.headerTitle}>Select a Patient</Text>
+        <Text style={styles.headerTitle}>Quick Note</Text>
         <Text style={styles.headerSubtitle}>
-          Choose a patient to create a new treatment note
+          Select a patient to create a new treatment note
         </Text>
       </View>
 

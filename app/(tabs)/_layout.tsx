@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Users, FilePlus, User } from 'lucide-react-native';
+import { Users, Zap, User } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 
 export default function TabLayout() {
@@ -22,20 +22,20 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
+        name="quick"
+        options={{
+          title: 'Quick',
+          tabBarIcon: ({ color, size }) => (
+            <Zap size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="patients"
         options={{
           title: 'Patients',
           tabBarIcon: ({ color, size }) => (
             <Users size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="new-note"
-        options={{
-          title: 'New Note',
-          tabBarIcon: ({ color, size }) => (
-            <FilePlus size={size} color={color} />
           ),
         }}
       />
