@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ChevronLeft, Eye, EyeOff } from "lucide-react-native";
+import { Eye, EyeOff } from "lucide-react-native";
 import { colors } from "@/constants/colors";
 
 export default function SignInScreen() {
@@ -47,7 +47,7 @@ export default function SignInScreen() {
           contentContainerStyle={[
             styles.scrollContent,
             { 
-              paddingTop: insets.top + 12,
+              paddingTop: insets.top + 44,
               paddingBottom: insets.bottom + 40,
               minHeight: height - insets.top - insets.bottom,
             },
@@ -56,10 +56,6 @@ export default function SignInScreen() {
           showsVerticalScrollIndicator={false}
           bounces={true}
         >
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={28} color={colors.primary} />
-          </TouchableOpacity>
-
           <Text style={styles.largeTitle}>Sign in</Text>
           <Text style={styles.subtitle}>Use your Cliniko Voice account</Text>
 
@@ -164,12 +160,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     flexGrow: 1,
-  },
-  backButton: {
-    alignSelf: "flex-start",
-    padding: 4,
-    marginLeft: -8,
-    marginBottom: 20,
   },
   largeTitle: {
     fontSize: 34,

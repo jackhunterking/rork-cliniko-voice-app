@@ -16,6 +16,7 @@ export default function AuthLayout() {
       }}
     >
       <Stack.Screen name="welcome" options={{ headerShown: false }} />
+      <Stack.Screen name="forgot-password" options={{ headerTitle: "Reset password", headerTransparent: false, headerShadowVisible: false, headerStyle: { backgroundColor: colors.background } }} />
     </Stack>
   );
 }

@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ChevronLeft, Mail, CheckCircle } from "lucide-react-native";
+import { Mail, CheckCircle } from "lucide-react-native";
 import { colors, spacing, radius } from "@/constants/colors";
 
 export default function ForgotPasswordScreen() {
@@ -71,7 +71,7 @@ export default function ForgotPasswordScreen() {
           contentContainerStyle={[
             styles.scrollContent,
             {
-              paddingTop: insets.top,
+              paddingTop: insets.top + 44,
               paddingBottom: insets.bottom + 40,
               minHeight: height - insets.top - insets.bottom,
             },
@@ -80,14 +80,6 @@ export default function ForgotPasswordScreen() {
           showsVerticalScrollIndicator={false}
           bounces={true}
         >
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ChevronLeft size={24} color={colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.title}>Reset password</Text>
-            <View style={styles.placeholder} />
-          </View>
-
           <View style={styles.content}>
             <View style={styles.iconContainer}>
               <Mail size={32} color={colors.primary} />
@@ -147,27 +139,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: "600" as const,
-    color: colors.textPrimary,
-  },
-  placeholder: {
-    width: 32,
   },
   keyboardView: {
     flex: 1,
