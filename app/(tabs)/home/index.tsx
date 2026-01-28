@@ -7,14 +7,14 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { ChevronRight, Zap } from 'lucide-react-native';
+import { ChevronRight, Home } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SearchBar } from '@/components/SearchBar';
 import { colors, spacing, radius } from '@/constants/colors';
 import { patients, formatDate, Patient } from '@/mocks/patients';
 import { useNote } from '@/context/NoteContext';
 
-export default function QuickScreen() {
+export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
@@ -52,7 +52,7 @@ export default function QuickScreen() {
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: 'Quick',
+          title: 'Home',
           headerLargeTitle: true,
           headerShadowVisible: false,
           headerStyle: { backgroundColor: colors.background },
@@ -61,7 +61,7 @@ export default function QuickScreen() {
       
       <View style={styles.header}>
         <View style={styles.iconContainer}>
-          <Zap size={24} color={colors.primary} />
+          <Home size={24} color={colors.primary} />
         </View>
         <Text style={styles.headerTitle}>Quick Note</Text>
         <Text style={styles.headerSubtitle}>

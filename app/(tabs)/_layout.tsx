@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Users, Zap, User } from 'lucide-react-native';
+import { Users, Home, User } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 
 export default function TabLayout() {
@@ -22,11 +22,11 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="quick"
+        name="home"
         options={{
-          title: 'Quick',
+          title: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <Zap size={size} color={color} />
+            <Home size={size} color={color} />
           ),
         }}
       />

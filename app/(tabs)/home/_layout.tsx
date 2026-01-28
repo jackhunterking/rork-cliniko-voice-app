@@ -2,7 +2,7 @@ import React from 'react';
 import { Stack } from 'expo-router';
 import { colors } from '@/constants/colors';
 
-export default function QuickLayout() {
+export default function HomeLayout() {
   return (
     <Stack
       screenOptions={{
@@ -13,7 +13,7 @@ export default function QuickLayout() {
         contentStyle: { backgroundColor: colors.background },
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Quick' }} />
+      <Stack.Screen name="index" options={{ title: 'Home' }} />
     </Stack>
   );
 }
