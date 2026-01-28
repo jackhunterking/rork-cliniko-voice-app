@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Animated,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
 import { List } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,6 +38,42 @@ export default function NoteEditorScreen() {
   const [dictationVisible, setDictationVisible] = useState(false);
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const [fieldLayouts, setFieldLayouts] = useState<Record<string, number>>({});
+  const [showTooltip, setShowTooltip] = useState(false);
+  const tooltipOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const checkTooltipShown = async () => {
+      try {
+        const hasShown = await AsyncStorage.getItem('fieldsTooltipShown');
+        if (!hasShown) {
+          setShowTooltip(true);
+          Animated.timing(tooltipOpacity, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start();
+        }
+      } catch (error) {
+        console.log('Error checking tooltip state:', error);
+      }
+    };
+    checkTooltipShown();
+  }, [tooltipOpacity]);
+
+  const dismissTooltip = useCallback(async () => {
+    if (showTooltip) {
+      Animated.timing(tooltipOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => setShowTooltip(false));
+      try {
+        await AsyncStorage.setItem('fieldsTooltipShown', 'true');
+      } catch (error) {
+        console.log('Error saving tooltip state:', error);
+      }
+    }
+  }, [showTooltip, tooltipOpacity]);
 
   const activeField = noteData.fieldValues.find(f => f.fieldId === activeFieldId);
 
@@ -100,12 +138,25 @@ export default function NoteEditorScreen() {
           headerShadowVisible: false,
           headerStyle: { backgroundColor: colors.background },
           headerRight: () => (
-            <TouchableOpacity
-              onPress={() => setFieldsSheetVisible(true)}
-              style={styles.headerButton}
-            >
-              <List size={22} color={colors.primary} />
-            </TouchableOpacity>
+            <View>
+              <TouchableOpacity
+                onPress={() => {
+                  dismissTooltip();
+                  setFieldsSheetVisible(true);
+                }}
+                style={styles.headerButton}
+              >
+                <List size={22} color={colors.primary} />
+              </TouchableOpacity>
+              {showTooltip && (
+                <Animated.View style={[styles.tooltip, { opacity: tooltipOpacity }]}>
+                  <TouchableOpacity onPress={dismissTooltip} activeOpacity={0.9}>
+                    <Text style={styles.tooltipText}>Jump to section</Text>
+                    <View style={styles.tooltipArrow} />
+                  </TouchableOpacity>
+                </Animated.View>
+              )}
+            </View>
           ),
         }}
       />
@@ -215,6 +266,39 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: spacing.xs,
+  },
+  tooltip: {
+    position: 'absolute',
+    top: 36,
+    right: 0,
+    backgroundColor: colors.textPrimary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tooltipText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '500' as const,
+    whiteSpace: 'nowrap',
+  },
+  tooltipArrow: {
+    position: 'absolute',
+    top: -6,
+    right: 10,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderBottomWidth: 6,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: colors.textPrimary,
   },
   subheader: {
     paddingHorizontal: spacing.md,
