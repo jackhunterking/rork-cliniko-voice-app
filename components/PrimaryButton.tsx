@@ -32,7 +32,7 @@ export function PrimaryButton({
       ]}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
+      activeOpacity={0.7}
     >
       {loading ? (
         <ActivityIndicator color="#FFFFFF" />

@@ -5,9 +5,17 @@ export default function AuthLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        headerTransparent: true,
+        headerTitle: "",
+        headerBackTitle: "",
+        headerBackButtonDisplayMode: "minimal",
+        headerTintColor: colors.primary,
         contentStyle: { backgroundColor: colors.background },
+        animation: "slide_from_right",
       }}
-    />
+    >
+      <Stack.Screen name="welcome" options={{ headerShown: false }} />
+    </Stack>
   );
 }
