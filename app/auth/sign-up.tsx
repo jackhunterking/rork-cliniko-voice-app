@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { ChevronLeft, Eye, EyeOff } from "lucide-react-native";
-import { colors, spacing, radius } from "@/constants/colors";
+import { colors } from "@/constants/colors";
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -45,14 +45,6 @@ export default function SignUpScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Create account</Text>
-        <View style={styles.placeholder} />
-      </View>
-
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -63,30 +55,32 @@ export default function SignUpScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.formCard}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full name</Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ChevronLeft size={28} color={colors.primary} />
+          </TouchableOpacity>
+
+          <Text style={styles.largeTitle}>Create account</Text>
+
+          <View style={styles.formSection}>
+            <View style={styles.inputRow}>
               <TextInput
                 style={styles.input}
                 value={fullName}
                 onChangeText={setFullName}
-                placeholder="Enter your full name"
+                placeholder="Full name"
                 placeholderTextColor={colors.textSecondary}
                 autoCapitalize="words"
                 autoComplete="name"
                 testID="fullname-input"
               />
             </View>
-
             <View style={styles.separator} />
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
+            <View style={styles.inputRow}>
               <TextInput
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="Enter your email"
+                placeholder="Email"
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -94,73 +88,68 @@ export default function SignUpScreen() {
                 testID="email-input"
               />
             </View>
+          </View>
 
-            <View style={styles.separator} />
+          <View style={styles.sectionSpacer} />
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Create a password"
-                  placeholderTextColor={colors.textSecondary}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoComplete="new-password"
-                  testID="password-input"
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeButton}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  {showPassword ? (
-                    <EyeOff size={20} color={colors.textSecondary} />
-                  ) : (
-                    <Eye size={20} color={colors.textSecondary} />
-                  )}
-                </TouchableOpacity>
-              </View>
+          <View style={styles.formSection}>
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Password"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoComplete="new-password"
+                testID="password-input"
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                {showPassword ? (
+                  <EyeOff size={20} color={colors.textSecondary} />
+                ) : (
+                  <Eye size={20} color={colors.textSecondary} />
+                )}
+              </TouchableOpacity>
             </View>
-
             <View style={styles.separator} />
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Confirm password</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={[styles.passwordInput, passwordError ? styles.inputError : null]}
-                  value={confirmPassword}
-                  onChangeText={(text) => {
-                    setConfirmPassword(text);
-                    if (passwordError) setPasswordError("");
-                  }}
-                  placeholder="Confirm your password"
-                  placeholderTextColor={colors.textSecondary}
-                  secureTextEntry={!showConfirmPassword}
-                  autoCapitalize="none"
-                  autoComplete="new-password"
-                  testID="confirm-password-input"
-                />
-                <TouchableOpacity
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={styles.eyeButton}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff size={20} color={colors.textSecondary} />
-                  ) : (
-                    <Eye size={20} color={colors.textSecondary} />
-                  )}
-                </TouchableOpacity>
-              </View>
-              {passwordError ? (
-                <Text style={styles.errorText}>{passwordError}</Text>
-              ) : null}
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={(text) => {
+                  setConfirmPassword(text);
+                  if (passwordError) setPasswordError("");
+                }}
+                placeholder="Confirm password"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+                autoComplete="new-password"
+                testID="confirm-password-input"
+              />
+              <TouchableOpacity
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={styles.eyeButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                {showConfirmPassword ? (
+                  <EyeOff size={20} color={colors.textSecondary} />
+                ) : (
+                  <Eye size={20} color={colors.textSecondary} />
+                )}
+              </TouchableOpacity>
             </View>
           </View>
+
+          {passwordError ? (
+            <Text style={styles.errorText}>{passwordError}</Text>
+          ) : null}
 
           <TouchableOpacity
             style={[
@@ -198,28 +187,7 @@ export default function SignUpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
     backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: "600" as const,
-    color: colors.textPrimary,
-  },
-  placeholder: {
-    width: 32,
   },
   keyboardView: {
     flex: 1,
@@ -228,70 +196,69 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.md,
-    paddingTop: spacing.lg,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
   },
-  formCard: {
-    backgroundColor: colors.background,
-    borderRadius: radius.md,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: colors.border,
+  backButton: {
+    alignSelf: "flex-start",
+    padding: 4,
+    marginLeft: -8,
+    marginBottom: 20,
   },
-  inputGroup: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "500" as const,
-    color: colors.textSecondary,
-    marginBottom: 6,
-    textTransform: "uppercase",
+  largeTitle: {
+    fontSize: 34,
+    fontWeight: "700" as const,
+    color: colors.textPrimary,
+    marginBottom: 40,
     letterSpacing: 0.3,
   },
-  input: {
-    fontSize: 17,
-    color: colors.textPrimary,
-    padding: 0,
+  formSection: {
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 12,
+    overflow: "hidden",
   },
-  passwordContainer: {
+  sectionSpacer: {
+    height: 32,
+  },
+  inputRow: {
     flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 16,
+    minHeight: 52,
   },
-  passwordInput: {
+  input: {
     flex: 1,
     fontSize: 17,
     color: colors.textPrimary,
-    padding: 0,
-  },
-  inputError: {
-    color: colors.error,
+    paddingVertical: 16,
   },
   eyeButton: {
-    padding: spacing.xs,
+    padding: 8,
+    marginRight: -8,
   },
   separator: {
-    height: 1,
+    height: StyleSheet.hairlineWidth,
     backgroundColor: colors.border,
-    marginLeft: spacing.md,
+    marginLeft: 16,
   },
   errorText: {
-    fontSize: 13,
+    fontSize: 14,
     color: colors.error,
-    marginTop: 6,
+    marginTop: 12,
+    marginLeft: 4,
   },
   primaryButton: {
     backgroundColor: colors.primary,
     paddingVertical: 16,
-    borderRadius: radius.md,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: spacing.lg,
+    marginTop: 40,
     minHeight: 52,
   },
   primaryButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   primaryButtonText: {
     color: "#FFFFFF",
@@ -300,7 +267,7 @@ const styles = StyleSheet.create({
   },
   signInLink: {
     alignItems: "center",
-    paddingVertical: spacing.lg,
+    paddingVertical: 24,
   },
   signInText: {
     fontSize: 15,
