@@ -64,12 +64,7 @@ export default function HomeScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
-          <Text style={styles.title}>Home</Text>
-          <Text style={styles.subtitle}>Quick actions for treatment notes.</Text>
-        </View>
-
-        <View style={styles.primaryCard}>
+        <View style={[styles.primaryCard, { marginTop: insets.top + spacing.lg }]}>
           <View style={styles.primaryCardContent}>
             <Text style={styles.primaryCardTitle}>New treatment note</Text>
             <Text style={styles.primaryCardDescription}>
@@ -194,20 +189,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.md,
-  },
-  header: {
-    marginBottom: spacing.lg,
-  },
-  title: {
-    fontSize: 34,
-    fontWeight: '700' as const,
-    color: colors.textPrimary,
-    letterSpacing: 0.4,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginTop: 4,
   },
   primaryCard: {
     backgroundColor: colors.background,
