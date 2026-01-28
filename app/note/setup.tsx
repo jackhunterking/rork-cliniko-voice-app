@@ -8,7 +8,7 @@ import {
   Switch,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { ChevronRight, Check } from 'lucide-react-native';
+import { ChevronRight, Check, ChevronDown } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Card } from '@/components/Card';
@@ -30,6 +30,7 @@ export default function NoteSetupScreen() {
   } = useNote();
 
   const [templateSheetVisible, setTemplateSheetVisible] = useState(false);
+  const [previewExpanded, setPreviewExpanded] = useState(false);
 
   const patientAppointments = noteData.patient
     ? getAppointmentsForPatient(noteData.patient.id)
@@ -134,20 +135,33 @@ export default function NoteSetupScreen() {
         </Card>
 
         {noteData.template && (
-          <Card style={styles.previewCard}>
-            <Text style={styles.previewTitle}>Template Preview</Text>
-            <Text style={styles.previewSubtitle}>
-              {noteData.template.fields.length} fields
-            </Text>
-            <View style={styles.fieldsList}>
-              {noteData.template.fields.map((field, index) => (
-                <View key={field.id} style={styles.fieldPreview}>
-                  <Text style={styles.fieldNumber}>{index + 1}</Text>
-                  <Text style={styles.fieldLabel}>{field.label}</Text>
-                </View>
-              ))}
-            </View>
-          </Card>
+          <View style={styles.previewSection}>
+            <TouchableOpacity
+              style={styles.previewToggle}
+              onPress={() => setPreviewExpanded(!previewExpanded)}
+              activeOpacity={0.6}
+            >
+              <Text style={styles.previewLink}>Preview fields</Text>
+              <ChevronDown
+                size={16}
+                color={colors.primary}
+                style={[
+                  styles.previewChevron,
+                  previewExpanded && styles.previewChevronExpanded,
+                ]}
+              />
+            </TouchableOpacity>
+            {previewExpanded && (
+              <View style={styles.fieldsList}>
+                {noteData.template.fields.map((field, index) => (
+                  <View key={field.id} style={styles.fieldPreview}>
+                    <Text style={styles.fieldNumber}>{index + 1}</Text>
+                    <Text style={styles.fieldLabel}>{field.label}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         )}
       </ScrollView>
 
@@ -269,22 +283,29 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginTop: 4,
   },
-  previewCard: {
+  previewSection: {
     marginTop: spacing.md,
   },
-  previewTitle: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: colors.textPrimary,
+  previewToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: spacing.xs,
   },
-  previewSubtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-    marginBottom: spacing.md,
+  previewLink: {
+    fontSize: 14,
+    color: colors.primary,
+  },
+  previewChevron: {
+    transform: [{ rotate: '0deg' }],
+  },
+  previewChevronExpanded: {
+    transform: [{ rotate: '180deg' }],
   },
   fieldsList: {
     gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingLeft: spacing.xs,
   },
   fieldPreview: {
     flexDirection: 'row',
