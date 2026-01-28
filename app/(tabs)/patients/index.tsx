@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { colors, spacing, radius } from '@/constants/colors';
 import { useClinikoPatients, isClinikoAuthError, isClinikoNetworkError } from '@/hooks/useCliniko';
 import { useNote } from '@/context/NoteContext';
 import { AppPatient } from '@/services/cliniko';
+import { logDebug, errorCliniko } from '@/lib/debug';
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return 'No appointments';
@@ -41,6 +42,7 @@ export default function PatientsListScreen() {
     error,
     refetch,
     isRefetching,
+    isFetching,
   } = useClinikoPatients(
     { archived: false },
     { 
@@ -50,6 +52,31 @@ export default function PatientsListScreen() {
   );
 
   const patients = data?.patients ?? [];
+
+  // Log query lifecycle for debugging
+  useEffect(() => {
+    if (isLoading && !isRefetching) {
+      logDebug('Patients: Starting initial fetch from Cliniko...');
+    }
+  }, [isLoading, isRefetching]);
+
+  useEffect(() => {
+    if (isRefetching) {
+      logDebug('Patients: Refetching data...');
+    }
+  }, [isRefetching]);
+
+  useEffect(() => {
+    if (data) {
+      logDebug(`Patients: Loaded ${patients.length} patients (total: ${data.totalEntries})`);
+    }
+  }, [data, patients.length]);
+
+  useEffect(() => {
+    if (isError && error) {
+      errorCliniko('Patients: Query failed:', error.message);
+    }
+  }, [isError, error]);
 
   // Filter patients locally based on search
   const filteredPatients = useMemo(() => {

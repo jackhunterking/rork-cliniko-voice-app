@@ -4,6 +4,8 @@
  */
 
 import { getClinikoApiKey, getClinikoShard } from '@/lib/secure-storage';
+import { logCliniko, errorCliniko, truncate, formatDuration, maskSecret } from '@/lib/debug';
+import { recordClinikoApiCall } from '@/stores/debug-store';
 import { ClinikoError, ClinikoApiError, getShardBaseUrl, ClinikoShard } from './clinikoTypes';
 
 // Required headers for Cliniko API
@@ -43,6 +45,20 @@ export function buildClinikoUrl(endpoint: string, shard: ClinikoShard): string {
 }
 
 /**
+ * Creates a safe response preview for logging (no sensitive data)
+ */
+function createResponsePreview(data: unknown): string {
+  if (data === null || data === undefined) return '[empty]';
+  
+  try {
+    const str = typeof data === 'string' ? data : JSON.stringify(data);
+    return truncate(str, 150);
+  } catch {
+    return '[unable to serialize]';
+  }
+}
+
+/**
  * Fetches data from the Cliniko API with automatic auth handling
  */
 export async function clinikoFetch<T>(
@@ -50,11 +66,24 @@ export async function clinikoFetch<T>(
   options: RequestInit = {},
   config?: ClinikoClientConfig
 ): Promise<T> {
+  const method = options.method || 'GET';
+  const startTime = Date.now();
+  
   // Get API key and shard from config or secure storage
   const apiKey = config?.apiKey ?? await getClinikoApiKey();
   const shard = config?.shard ?? await getClinikoShard();
 
   if (!apiKey) {
+    logCliniko(`${method} ${endpoint} - ERROR: No API key found`);
+    recordClinikoApiCall({
+      endpoint,
+      method,
+      status: 401,
+      duration: Date.now() - startTime,
+      timestamp: new Date(),
+      errorMessage: 'Cliniko API key not found',
+      success: false,
+    });
     throw new ClinikoError({
       status: 401,
       message: 'Cliniko API key not found. Please connect your Cliniko account.',
@@ -62,6 +91,16 @@ export async function clinikoFetch<T>(
   }
 
   if (!shard) {
+    logCliniko(`${method} ${endpoint} - ERROR: No shard configured`);
+    recordClinikoApiCall({
+      endpoint,
+      method,
+      status: 400,
+      duration: Date.now() - startTime,
+      timestamp: new Date(),
+      errorMessage: 'Cliniko region not configured',
+      success: false,
+    });
     throw new ClinikoError({
       status: 400,
       message: 'Cliniko region not configured. Please select your Cliniko region.',
@@ -76,15 +115,45 @@ export async function clinikoFetch<T>(
     ...(options.headers as Record<string, string> || {}),
   };
 
-  console.log(`[Cliniko] ${options.method || 'GET'} ${endpoint}`);
+  // Log request (never log auth header or full API key)
+  logCliniko(`${method} ${endpoint} (${shard}.cliniko.com) [key: ${maskSecret(apiKey)}]`);
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (networkError) {
+    const duration = Date.now() - startTime;
+    const errorMsg = networkError instanceof Error ? networkError.message : 'Network error';
+    errorCliniko(`${method} ${endpoint} - NETWORK ERROR after ${formatDuration(duration)}: ${errorMsg}`);
+    recordClinikoApiCall({
+      endpoint,
+      method,
+      status: 0,
+      duration,
+      timestamp: new Date(),
+      errorMessage: errorMsg,
+      success: false,
+    });
+    throw networkError;
+  }
+
+  const duration = Date.now() - startTime;
 
   // Handle non-JSON responses (like 204 No Content)
   if (response.status === 204) {
+    logCliniko(`${method} ${endpoint} - 204 No Content (${formatDuration(duration)})`);
+    recordClinikoApiCall({
+      endpoint,
+      method,
+      status: 204,
+      duration,
+      timestamp: new Date(),
+      responsePreview: '[no content]',
+      success: true,
+    });
     return {} as T;
   }
 
@@ -100,8 +169,6 @@ export async function clinikoFetch<T>(
 
   // Handle error responses
   if (!response.ok) {
-    console.error(`[Cliniko] Error ${response.status}:`, data);
-
     const errorMessage = typeof data === 'object' && data !== null && 'message' in data
       ? (data as { message: string }).message
       : `Request failed with status ${response.status}`;
@@ -110,6 +177,22 @@ export async function clinikoFetch<T>(
       ? (data as { errors: Record<string, string[]> }).errors
       : undefined;
 
+    errorCliniko(
+      `${method} ${endpoint} - ${response.status} ${response.statusText} (${formatDuration(duration)})`,
+      errorMessage
+    );
+    
+    recordClinikoApiCall({
+      endpoint,
+      method,
+      status: response.status,
+      duration,
+      timestamp: new Date(),
+      errorMessage,
+      responsePreview: createResponsePreview(data),
+      success: false,
+    });
+
     throw new ClinikoError({
       status: response.status,
       message: errorMessage,
@@ -117,7 +200,48 @@ export async function clinikoFetch<T>(
     });
   }
 
+  // Success - log summary
+  const preview = createResponsePreview(data);
+  const itemCount = getItemCount(data);
+  const countInfo = itemCount !== null ? `, ${itemCount} items` : '';
+  
+  logCliniko(`${method} ${endpoint} - ${response.status} OK (${formatDuration(duration)}${countInfo})`);
+  
+  recordClinikoApiCall({
+    endpoint,
+    method,
+    status: response.status,
+    duration,
+    timestamp: new Date(),
+    responsePreview: preview,
+    success: true,
+  });
+
   return data as T;
+}
+
+/**
+ * Try to extract item count from common Cliniko response patterns
+ */
+function getItemCount(data: unknown): number | null {
+  if (!data || typeof data !== 'object') return null;
+  
+  const obj = data as Record<string, unknown>;
+  
+  // Check for total_entries field (pagination)
+  if (typeof obj.total_entries === 'number') {
+    return obj.total_entries;
+  }
+  
+  // Check for common array fields
+  const arrayFields = ['patients', 'treatment_note_templates', 'treatment_notes', 'individual_appointments'];
+  for (const field of arrayFields) {
+    if (Array.isArray(obj[field])) {
+      return (obj[field] as unknown[]).length;
+    }
+  }
+  
+  return null;
 }
 
 /**
@@ -184,6 +308,8 @@ export async function validateClinikoCredentials(
   apiKey: string,
   shard: ClinikoShard
 ): Promise<{ valid: boolean; user?: { firstName: string; lastName: string; email: string } }> {
+  logCliniko(`Validating credentials for shard ${shard} [key: ${maskSecret(apiKey)}]`);
+  
   try {
     const response = await clinikoGet<{
       id: string;
@@ -192,6 +318,8 @@ export async function validateClinikoCredentials(
       email: string;
     }>('/user', { apiKey, shard });
 
+    logCliniko(`Credentials valid - user: ${response.first_name} ${response.last_name}`);
+    
     return {
       valid: true,
       user: {
@@ -203,9 +331,11 @@ export async function validateClinikoCredentials(
   } catch (error) {
     if (error instanceof ClinikoError) {
       if (error.status === 401) {
+        logCliniko('Credentials invalid - 401 Unauthorized');
         return { valid: false };
       }
     }
+    errorCliniko('Credential validation failed with unexpected error:', error);
     throw error;
   }
 }

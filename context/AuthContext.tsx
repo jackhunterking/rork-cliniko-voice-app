@@ -12,6 +12,7 @@ import {
   getCoupledUserId,
   isClinikoConfigured,
 } from '@/lib/secure-storage';
+import { logAuth, errorAuth, maskSecret } from '@/lib/debug';
 import { clinikoKeys } from '@/hooks/useCliniko';
 
 export interface AuthState {
@@ -42,17 +43,21 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   // Check Cliniko key status and validate it's for the current user
   const refreshClinikoKeyStatus = useCallback(async () => {
+    logAuth('Refreshing Cliniko key status...');
     const isConfigured = await isClinikoConfigured();
+    logAuth(`Cliniko configured: ${isConfigured}`);
     setHasClinikoKey(isConfigured);
   }, []);
 
   // Validate that Cliniko credentials belong to the current user
   const validateClinikoCredentialOwnership = useCallback(async (currentUserId: string) => {
+    logAuth(`Validating Cliniko credential ownership for user: ${maskSecret(currentUserId)}`);
     const coupledUserId = await getCoupledUserId();
+    logAuth(`Coupled user ID: ${coupledUserId ? maskSecret(coupledUserId) : '[none]'}`);
     
     // If there's a coupled user ID and it doesn't match, clear credentials
     if (coupledUserId && coupledUserId !== currentUserId) {
-      console.log('[Auth] Cliniko credentials belong to different user, clearing...');
+      logAuth('Cliniko credentials belong to different user - clearing all Cliniko data');
       await clearAllClinikoData();
       // Clear all Cliniko-related cache
       queryClient.removeQueries({ queryKey: clinikoKeys.all });
@@ -60,6 +65,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       return false;
     }
     
+    logAuth('Credential ownership validated - user matches or no existing credentials');
     return true;
   }, [queryClient]);
 
@@ -107,29 +113,39 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     let mounted = true;
 
     const initializeAuth = async () => {
+      logAuth('Initializing auth - checking session...');
       try {
         // Get initial session
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (mounted) {
+          if (initialSession?.user) {
+            logAuth(`Session found for user: ${maskSecret(initialSession.user.id)} (${initialSession.user.email})`);
+          } else {
+            logAuth('No session found - user not authenticated');
+          }
+          
           setSession(initialSession);
           setUser(initialSession?.user ?? null);
           
           // Check Cliniko key if user is authenticated
           if (initialSession?.user) {
+            logAuth('Checking Cliniko credentials coupling...');
             // First validate ownership
             const isValid = await validateClinikoCredentialOwnership(initialSession.user.id);
             
             if (isValid) {
               const isConfigured = await isClinikoConfigured();
+              logAuth(`Cliniko configured: ${isConfigured}`);
               setHasClinikoKey(isConfigured);
             }
           }
           
+          logAuth('Auth initialization complete');
           setIsLoading(false);
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        errorAuth('Error initializing auth:', error);
         if (mounted) {
           setIsLoading(false);
         }
@@ -141,11 +157,17 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     // Subscribe to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('Auth state changed:', event);
+        logAuth(`Auth state changed: ${event}`);
         
         if (mounted) {
           const previousUserId = user?.id;
           const newUserId = newSession?.user?.id;
+          
+          if (newSession?.user) {
+            logAuth(`New session for user: ${maskSecret(newUserId!)} (${newSession.user.email})`);
+          } else {
+            logAuth('Session ended - user signed out');
+          }
           
           setSession(newSession);
           setUser(newSession?.user ?? null);
@@ -153,20 +175,23 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
           if (newSession?.user) {
             // Check if user changed
             if (previousUserId && previousUserId !== newUserId) {
-              console.log('[Auth] User changed, clearing previous Cliniko data');
+              logAuth(`User changed from ${maskSecret(previousUserId)} to ${maskSecret(newUserId!)} - clearing previous Cliniko data`);
               await clearAllClinikoData();
               queryClient.removeQueries({ queryKey: clinikoKeys.all });
               setHasClinikoKey(false);
             } else {
               // Same user or new login, validate credentials
+              logAuth('Same user or new login - validating Cliniko credentials');
               const isValid = await validateClinikoCredentialOwnership(newSession.user.id);
               if (isValid) {
                 const isConfigured = await isClinikoConfigured();
+                logAuth(`Cliniko configured: ${isConfigured}`);
                 setHasClinikoKey(isConfigured);
               }
             }
           } else {
             // User signed out
+            logAuth('Resetting hasClinikoKey to false');
             setHasClinikoKey(false);
           }
         }
@@ -236,18 +261,21 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   );
 
   const signOut = useCallback(async () => {
-    console.log('[Auth] Signing out, clearing all Cliniko data...');
+    logAuth('Signing out - clearing all Cliniko data...');
     
     // Clear Cliniko credentials from secure storage
     await clearAllClinikoData();
+    logAuth('Cliniko credentials cleared from secure storage');
     
     // Clear all Cliniko-related cache
     queryClient.removeQueries({ queryKey: clinikoKeys.all });
+    logAuth('Cliniko cache cleared');
     
     setHasClinikoKey(false);
     
     // Sign out from Supabase
     await supabase.auth.signOut();
+    logAuth('Supabase sign out complete');
   }, [queryClient]);
 
   return {

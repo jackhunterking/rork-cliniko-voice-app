@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NoteProvider } from "@/context/NoteContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { colors } from "@/constants/colors";
+import { logRouter } from "@/lib/debug";
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -24,6 +25,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Don't do anything while loading
     if (isLoading) {
+      logRouter('AuthGuard: Still loading, waiting...');
       return;
     }
 
@@ -37,14 +39,20 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const onSplash = pathname === "/splash";
     const onIndex = pathname === "/";
 
+    logRouter(`AuthGuard: session=${!!session}, hasClinikoKey=${hasClinikoKey}, pathname=${pathname}`);
+
     // User is NOT authenticated
     if (!session) {
       // If not in auth group and not on splash/index, redirect to welcome
       if (!inAuthGroup && !onSplash && !onIndex) {
+        logRouter('AuthGuard: No session, not in auth group → /auth/welcome');
         router.replace("/auth/welcome");
       } else if (onIndex || onSplash) {
         // If on index or splash, go to welcome
+        logRouter('AuthGuard: No session, on index/splash → /auth/welcome');
         router.replace("/auth/welcome");
+      } else {
+        logRouter('AuthGuard: No session, already in auth group → staying');
       }
       return;
     }
@@ -55,7 +63,10 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       if (!hasClinikoKey) {
         // If not already on connect-cliniko, redirect there
         if (!onConnectCliniko) {
+          logRouter('AuthGuard: Has session, no Cliniko key → /connect-cliniko');
           router.replace("/connect-cliniko");
+        } else {
+          logRouter('AuthGuard: Has session, no Cliniko key, already on connect-cliniko → staying');
         }
         return;
       }
@@ -63,7 +74,10 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       // User has both session and Cliniko key
       // If still in auth group, connect screen, splash, or index, redirect to home
       if (inAuthGroup || onConnectCliniko || onSplash || onIndex) {
+        logRouter('AuthGuard: Has session + Cliniko key, on setup screen → /(tabs)/home');
         router.replace("/(tabs)/home");
+      } else {
+        logRouter(`AuthGuard: Has session + Cliniko key, on ${pathname} → staying`);
       }
     }
   }, [session, isLoading, hasClinikoKey, segments, pathname, router]);
@@ -109,6 +123,7 @@ function RootLayoutNav() {
       <Stack.Screen name="settings/feature-request/success" options={{ headerShown: false }} />
       <Stack.Screen name="settings/delete-data" options={{ title: "Delete My Data" }} />
       <Stack.Screen name="settings/delete-data/success" options={{ headerShown: false }} />
+      <Stack.Screen name="settings/diagnostics" options={{ title: "Diagnostics" }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );

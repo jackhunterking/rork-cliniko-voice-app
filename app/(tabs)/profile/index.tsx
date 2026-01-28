@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Info,
   RefreshCw,
+  Bug,
 } from 'lucide-react-native';
 import { colors, spacing, radius } from '@/constants/colors';
 import { useAuth } from '@/context/AuthContext';
@@ -302,6 +303,13 @@ export default function SettingsScreen() {
               icon={<Lightbulb size={20} color={colors.textSecondary} />}
               label="Request a feature"
               onPress={() => router.push('/settings/feature-request')}
+            />
+            <View style={styles.separator} />
+            <MenuItem
+              icon={<Bug size={20} color={colors.textSecondary} />}
+              label="Diagnostics"
+              subtitle="Debug info & connection test"
+              onPress={() => router.push('/settings/diagnostics')}
             />
           </View>
         </View>
