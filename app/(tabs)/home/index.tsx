@@ -1,97 +1,109 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { ChevronRight, Home } from 'lucide-react-native';
+import { Plus, FileText, Users, LayoutTemplate } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SearchBar } from '@/components/SearchBar';
 import { colors, spacing, radius } from '@/constants/colors';
-import { patients, formatDate, Patient } from '@/mocks/patients';
-import { useNote } from '@/context/NoteContext';
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [search, setSearch] = useState('');
-  const { setPatient } = useNote();
 
-  const filteredPatients = useMemo(() => {
-    if (!search.trim()) return patients;
-    const query = search.toLowerCase();
-    return patients.filter(p => p.name.toLowerCase().includes(query));
-  }, [search]);
-
-  const handleSelectPatient = (patient: Patient) => {
-    console.log('Starting new note for patient:', patient.name);
-    setPatient(patient);
+  const handleStartNote = () => {
+    console.log('Starting new treatment note');
     router.push('/note/setup');
   };
-
-  const renderPatient = ({ item }: { item: Patient }) => (
-    <TouchableOpacity
-      style={styles.patientRow}
-      onPress={() => handleSelectPatient(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.patientInfo}>
-        <Text style={styles.patientName}>{item.name}</Text>
-        <Text style={styles.lastAppointment}>
-          Last visit: {formatDate(item.lastAppointment)}
-        </Text>
-      </View>
-      <ChevronRight size={20} color={colors.textSecondary} />
-    </TouchableOpacity>
-  );
 
   return (
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: 'Home',
-          headerLargeTitle: true,
-          headerShadowVisible: false,
-          headerStyle: { backgroundColor: colors.background },
+          headerShown: false,
         }}
       />
       
-      <View style={styles.header}>
-        <View style={styles.iconContainer}>
-          <Home size={24} color={colors.primary} />
-        </View>
-        <Text style={styles.headerTitle}>Quick Note</Text>
-        <Text style={styles.headerSubtitle}>
-          Select a patient to create a new treatment note
-        </Text>
-      </View>
-
-      <View style={styles.searchContainer}>
-        <SearchBar
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search patients"
-        />
-      </View>
-      
-      <FlatList
-        data={filteredPatients}
-        keyExtractor={item => item.id}
-        renderItem={renderPatient}
+      <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + spacing.md },
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + spacing.lg },
         ]}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No patients found</Text>
+      >
+        <View style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
+          <Text style={styles.title}>Home</Text>
+          <Text style={styles.subtitle}>Quick actions for treatment notes.</Text>
+        </View>
+
+        <View style={styles.primaryCard}>
+          <View style={styles.primaryCardContent}>
+            <Text style={styles.primaryCardTitle}>New treatment note</Text>
+            <Text style={styles.primaryCardDescription}>
+              Start dictation in a Cliniko template.
+            </Text>
           </View>
-        }
-      />
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={handleStartNote}
+            activeOpacity={0.8}
+          >
+            <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+            <Text style={styles.startButtonText}>Start</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick actions</Text>
+          
+          <View style={styles.quickActionsCard}>
+            <View style={[styles.quickActionRow, styles.disabledRow]}>
+              <View style={[styles.quickActionIcon, styles.disabledIcon]}>
+                <FileText size={18} color={colors.textSecondary} />
+              </View>
+              <View style={styles.quickActionContent}>
+                <Text style={[styles.quickActionTitle, styles.disabledText]}>
+                  Resume last draft
+                </Text>
+                <Text style={styles.quickActionSubtitle}>Coming soon</Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={[styles.quickActionRow, styles.disabledRow]}>
+              <View style={[styles.quickActionIcon, styles.disabledIcon]}>
+                <Users size={18} color={colors.textSecondary} />
+              </View>
+              <View style={styles.quickActionContent}>
+                <Text style={[styles.quickActionTitle, styles.disabledText]}>
+                  Recent patients
+                </Text>
+                <Text style={styles.quickActionSubtitle}>Coming soon</Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={[styles.quickActionRow, styles.disabledRow]}>
+              <View style={[styles.quickActionIcon, styles.disabledIcon]}>
+                <LayoutTemplate size={18} color={colors.textSecondary} />
+              </View>
+              <View style={styles.quickActionContent}>
+                <Text style={[styles.quickActionTitle, styles.disabledText]}>
+                  Templates
+                </Text>
+                <Text style={styles.quickActionSubtitle}>Coming soon</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -99,69 +111,130 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
   },
-  header: {
-    alignItems: 'center',
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: spacing.md,
   },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.backgroundSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
+  header: {
+    marginBottom: spacing.lg,
   },
-  headerTitle: {
-    fontSize: 20,
+  title: {
+    fontSize: 34,
+    fontWeight: '700' as const,
+    color: colors.textPrimary,
+    letterSpacing: 0.4,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  primaryCard: {
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  primaryCardContent: {
+    marginBottom: spacing.md,
+  },
+  primaryCardTitle: {
+    fontSize: 17,
     fontWeight: '600' as const,
     color: colors.textPrimary,
     marginBottom: 4,
   },
-  headerSubtitle: {
+  primaryCardDescription: {
     fontSize: 15,
     color: colors.textSecondary,
-    textAlign: 'center',
+    lineHeight: 20,
   },
-  searchContainer: {
+  startButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.sm,
+    paddingVertical: 12,
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  listContent: {
-    paddingTop: spacing.sm,
-  },
-  patientRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.background,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    justifyContent: 'center',
+    gap: 6,
   },
-  patientInfo: {
+  startButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#FFFFFF',
+  },
+  section: {
+    marginBottom: spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm,
+    marginLeft: spacing.xs,
+  },
+  quickActionsCard: {
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  quickActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+  },
+  disabledRow: {
+    opacity: 0.5,
+  },
+  quickActionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.backgroundSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  disabledIcon: {
+    backgroundColor: colors.backgroundSecondary,
+  },
+  quickActionContent: {
     flex: 1,
   },
-  patientName: {
-    fontSize: 17,
-    color: colors.textPrimary,
-    fontWeight: '400' as const,
-  },
-  lastAppointment: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: 3,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl * 2,
-  },
-  emptyText: {
+  quickActionTitle: {
     fontSize: 16,
+    fontWeight: '400' as const,
+    color: colors.textPrimary,
+  },
+  disabledText: {
     color: colors.textSecondary,
+  },
+  quickActionSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginLeft: 64,
   },
 });
