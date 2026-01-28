@@ -36,6 +36,7 @@ function RootLayoutNav() {
         }}
       />
       <Stack.Screen name="auth" options={{ headerShown: false }} />
+      <Stack.Screen name="connect-cliniko" options={{ headerShown: false }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );
