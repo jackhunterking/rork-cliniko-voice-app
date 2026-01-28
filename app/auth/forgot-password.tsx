@@ -3,19 +3,23 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   TextInput,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  ScrollView,
+  useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronLeft, Mail, CheckCircle } from "lucide-react-native";
 import { colors, spacing, radius } from "@/constants/colors";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -32,14 +36,14 @@ export default function ForgotPasswordScreen() {
 
   if (isSuccess) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.successContent}>
+      <View style={styles.container}>
+        <View style={[styles.successContent, { paddingBottom: insets.bottom + 40 }]}>
           <View style={styles.successIconContainer}>
             <CheckCircle size={48} color={colors.primary} />
           </View>
           <Text style={styles.successTitle}>Check your inbox</Text>
           <Text style={styles.successText}>
-            We've sent a password reset link to{"\n"}
+            We&apos;ve sent a password reset link to{"\n"}
             <Text style={styles.emailHighlight}>{email}</Text>
           </Text>
           <TouchableOpacity
@@ -51,69 +55,85 @@ export default function ForgotPasswordScreen() {
             <Text style={styles.primaryButtonText}>Back to sign in</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Reset password</Text>
-        <View style={styles.placeholder} />
-      </View>
-
+    <View style={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
-        <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            <Mail size={32} color={colors.primary} />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom + 40,
+              minHeight: height - insets.top - insets.bottom,
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={true}
+        >
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <ChevronLeft size={24} color={colors.primary} />
+            </TouchableOpacity>
+            <Text style={styles.title}>Reset password</Text>
+            <View style={styles.placeholder} />
           </View>
-          <Text style={styles.description}>
-            Enter your email and we'll send a reset link.
-          </Text>
 
-          <View style={styles.formCard}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Enter your email"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                autoFocus
-                testID="email-input"
-              />
+          <View style={styles.content}>
+            <View style={styles.iconContainer}>
+              <Mail size={32} color={colors.primary} />
             </View>
-          </View>
+            <Text style={styles.description}>
+              Enter your email and we&apos;ll send a reset link.
+            </Text>
 
-          <TouchableOpacity
-            style={[
-              styles.primaryButton,
-              (!isFormValid || isLoading) && styles.primaryButtonDisabled,
-            ]}
-            onPress={handleSendResetLink}
-            disabled={!isFormValid || isLoading}
-            activeOpacity={0.8}
-            testID="send-reset-link-button"
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Send reset link</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+            <View style={styles.formCard}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Enter your email"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoFocus
+                  testID="email-input"
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.primaryButton,
+                (!isFormValid || isLoading) && styles.primaryButtonDisabled,
+              ]}
+              onPress={handleSendResetLink}
+              disabled={!isFormValid || isLoading}
+              activeOpacity={0.8}
+              testID="send-reset-link-button"
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Send reset link</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -121,6 +141,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
     flexDirection: "row",

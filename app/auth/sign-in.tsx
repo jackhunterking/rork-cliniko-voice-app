@@ -3,20 +3,23 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   TextInput,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronLeft, Eye, EyeOff } from "lucide-react-native";
 import { colors } from "@/constants/colors";
 
 export default function SignInScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -33,16 +36,25 @@ export default function SignInScreen() {
   const isFormValid = email.trim() && password;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { 
+              paddingTop: insets.top + 12,
+              paddingBottom: insets.bottom + 40,
+              minHeight: height - insets.top - insets.bottom,
+            },
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          bounces={true}
         >
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <ChevronLeft size={28} color={colors.primary} />
@@ -134,7 +146,7 @@ export default function SignInScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -151,8 +163,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 40,
+    flexGrow: 1,
   },
   backButton: {
     alignSelf: "flex-start",

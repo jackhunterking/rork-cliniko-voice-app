@@ -5,17 +5,33 @@ import {
   StyleSheet,
   Image,
   TouchableOpacity,
-  SafeAreaView,
+  ScrollView,
+  useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { colors, spacing } from "@/constants/colors";
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: insets.top + 80,
+            paddingBottom: insets.bottom + 24,
+            minHeight: height,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
         <View style={styles.header}>
           <View style={styles.iconContainer}>
             <Image
@@ -51,8 +67,8 @@ export default function WelcomeScreen() {
             Connect your Cliniko API key after signing in.
           </Text>
         </View>
-      </View>
-    </SafeAreaView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -61,12 +77,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: spacing.lg,
     justifyContent: "space-between",
-    paddingTop: 80,
-    paddingBottom: spacing.xl,
   },
   header: {
     alignItems: "center",
