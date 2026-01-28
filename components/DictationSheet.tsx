@@ -101,7 +101,10 @@ export function DictationSheet({
     <BottomSheet visible={visible} onClose={onClose} maxHeight={400}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.fieldLabel}>{fieldLabel}</Text>
+          <View style={styles.headerContent}>
+            <Text style={styles.dictatingLabel}>Dictating into:</Text>
+            <Text style={styles.fieldLabel}>{fieldLabel}</Text>
+          </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <X size={20} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -166,13 +169,22 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  headerContent: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  dictatingLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 4,
   },
   fieldLabel: {
-    fontSize: 17,
-    fontWeight: '600' as const,
+    fontSize: 20,
+    fontWeight: '700' as const,
     color: colors.textPrimary,
   },
   closeButton: {
