@@ -66,7 +66,7 @@ export function ProblemSection() {
         <div className="max-w-3xl mx-auto text-center mb-16 md:mb-20">
           <div className="reveal inline-flex items-center gap-2 px-4 py-2 bg-red-50 rounded-full mb-6">
             <span className="text-red-500 text-lg">⚠️</span>
-            <span className="text-sm font-semibold text-red-600">The documentation crisis</span>
+            <span className="text-sm font-semibold text-red-600">Every Cliniko user knows this</span>
           </div>
           
           <h2 className="reveal font-display text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 mb-6">
@@ -74,8 +74,8 @@ export function ProblemSection() {
           </h2>
           
           <p className="reveal text-lg md:text-xl text-slate-600 leading-relaxed">
-            You're not alone. Clinicians everywhere are struggling with the same 
-            documentation burden. It's time for a better way.
+            You love Cliniko for managing your practice. But typing treatment notes 
+            after every session? That's eating into your life.
           </p>
         </div>
 
@@ -115,7 +115,7 @@ export function ProblemSection() {
         <div className="reveal max-w-2xl mx-auto text-center">
           <div className="relative inline-block">
             <p className="text-2xl md:text-3xl font-bold text-slate-900">
-              What if you could just{' '}
+              What if you could{' '}
               <span className="relative inline-block">
                 <span className="gradient-text">speak</span>
                 <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 100 12" preserveAspectRatio="none">
@@ -134,7 +134,7 @@ export function ProblemSection() {
                   </defs>
                 </svg>
               </span>
-              {' '}your notes?
+              {' '}your notes into Cliniko?
             </p>
           </div>
         </div>

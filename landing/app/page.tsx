@@ -41,7 +41,6 @@ export default function LandingPage() {
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-slate-900">Cliniko Voice</span>
-                <span className="hidden sm:inline-flex px-2 py-0.5 text-[10px] font-bold bg-cyan-100 text-cyan-700 rounded-full uppercase tracking-wide">For Cliniko</span>
               </div>
             </div>
 

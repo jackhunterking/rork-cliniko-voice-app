@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 
 const steps = [
   {
     number: '01',
-    title: 'Select your patient',
-    description: 'Pull up from your schedule or search. One tap and you\'re ready to go.',
+    title: 'Sync your Cliniko patients',
+    description: 'Connect your Cliniko account once. Your patients and appointments appear automatically.',
     visual: 'patient-select',
   },
   {
@@ -18,13 +19,13 @@ const steps = [
   {
     number: '03',
     title: 'Review & refine',
-    description: 'Your words become beautifully structured notes. Make a quick edit if needed—usually you won\'t.',
+    description: 'Your words become beautifully structured treatment notes. Make a quick edit if needed.',
     visual: 'review',
   },
   {
     number: '04',
-    title: 'Done. Next patient.',
-    description: 'Save directly to your records. Move on knowing the admin is handled.',
+    title: 'Send to Cliniko',
+    description: 'One tap to save directly to your Cliniko patient record. Move on knowing admin is handled.',
     visual: 'complete',
   },
 ];
@@ -72,17 +73,17 @@ export function HowItWorks() {
         {/* Section header */}
         <div className="max-w-3xl mx-auto text-center mb-16 md:mb-20">
           <div className="reveal inline-flex items-center gap-2 px-4 py-2 bg-cyan-50 rounded-full mb-6">
-            <span className="text-cyan-600 text-lg">✨</span>
-            <span className="text-sm font-semibold text-cyan-700">Simple by design</span>
+            <span className="text-cyan-600 text-lg">🔗</span>
+            <span className="text-sm font-semibold text-cyan-700">Seamless Cliniko integration</span>
           </div>
           
           <h2 className="reveal font-display text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 mb-6">
-            From voice to notes in seconds
+            Voice to Cliniko in seconds
           </h2>
           
           <p className="reveal text-lg md:text-xl text-slate-600 leading-relaxed">
-            No training required. No complex setup. Open the app and start talking.
-            Your notes are ready before you finish your thought.
+            Connect your Cliniko account once. From then on, just speak and your 
+            treatment notes flow directly into your patient records.
           </p>
         </div>
 
@@ -148,74 +149,37 @@ export function HowItWorks() {
                   <div className="h-full flex flex-col">
                     <div className="h-10" />
                     
-                    {/* Step 1: Patient select */}
-                    <div className={`absolute inset-0 pt-10 transition-opacity duration-500 ${activeStep === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                      <div className="px-4 py-3 border-b border-slate-100">
-                        <h3 className="text-base font-semibold text-slate-900">Select Patient</h3>
-                      </div>
-                      <div className="p-4">
-                        <div className="relative mb-4">
-                          <input type="text" placeholder="Search patients..." className="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border-0" readOnly />
-                        </div>
-                        <p className="text-xs text-slate-400 mb-3 font-medium">TODAY'S APPOINTMENTS</p>
-                        {['Sarah M.', 'James K.', 'Emma L.'].map((name, i) => (
-                          <div key={name} className={`flex items-center gap-3 p-3 rounded-xl mb-2 ${i === 0 ? 'bg-cyan-50 border border-cyan-200' : 'bg-slate-50'}`}>
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${i === 0 ? 'bg-cyan-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
-                              {name.split(' ').map(n => n[0]).join('')}
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-slate-900">{name}</p>
-                              <p className="text-xs text-slate-400">{['10:30 AM', '11:15 AM', '2:00 PM'][i]}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                    {/* Step 1: Patient select - Cliniko Sync */}
+                    <div className={`absolute inset-0 transition-opacity duration-500 ${activeStep === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                      <Image
+                        src="/mockups/appointments.png"
+                        alt="Today's appointments synced from Cliniko"
+                        fill
+                        className="object-cover object-top"
+                        sizes="300px"
+                      />
                     </div>
                     
-                    {/* Step 2: Recording */}
-                    <div className={`absolute inset-0 pt-10 transition-opacity duration-500 ${activeStep === 1 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                      <div className="h-full flex flex-col">
-                        <div className="px-4 py-3 border-b border-slate-100 text-center">
-                          <h3 className="text-base font-semibold text-slate-900">Recording</h3>
-                          <div className="flex items-center justify-center gap-1.5 mt-1">
-                            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                            <span className="text-xs font-medium text-red-500">Live</span>
-                          </div>
-                        </div>
-                        <div className="flex-1 p-4">
-                          <p className="text-sm text-slate-700 leading-relaxed">
-                            Patient presents with improved mobility since last session.
-                            <span className="text-slate-400"> Range of motion has increased notably in the affected area...</span>
-                            <span className="inline-block w-0.5 h-4 bg-cyan-500 animate-pulse ml-0.5 align-middle" />
-                          </p>
-                        </div>
-                        <div className="p-4 flex justify-center">
-                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
-                            <div className="w-6 h-6 bg-white rounded-sm" />
-                          </div>
-                        </div>
-                      </div>
+                    {/* Step 2: Recording - Live Transcription */}
+                    <div className={`absolute inset-0 transition-opacity duration-500 ${activeStep === 1 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                      <Image
+                        src="/mockups/live-transcription.png"
+                        alt="Live transcription - speak naturally while the app transcribes in real-time"
+                        fill
+                        className="object-cover object-top"
+                        sizes="300px"
+                      />
                     </div>
                     
-                    {/* Step 3: Review */}
-                    <div className={`absolute inset-0 pt-10 transition-opacity duration-500 ${activeStep === 2 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                      <div className="px-4 py-3 border-b border-slate-100">
-                        <h3 className="text-base font-semibold text-slate-900">Review Note</h3>
-                      </div>
-                      <div className="p-4 space-y-4">
-                        <div>
-                          <p className="text-xs text-cyan-600 font-semibold mb-1">SUBJECTIVE</p>
-                          <p className="text-sm text-slate-600">Patient reports improvement...</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-cyan-600 font-semibold mb-1">OBJECTIVE</p>
-                          <p className="text-sm text-slate-600">ROM increased to 80°...</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-cyan-600 font-semibold mb-1">ASSESSMENT</p>
-                          <p className="text-sm text-slate-600">Progressing well with treatment...</p>
-                        </div>
-                      </div>
+                    {/* Step 3: Review - Edit Treatment Note */}
+                    <div className={`absolute inset-0 transition-opacity duration-500 ${activeStep === 2 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                      <Image
+                        src="/mockups/review.png"
+                        alt="Review and edit your treatment note with structured fields"
+                        fill
+                        className="object-cover object-top"
+                        sizes="300px"
+                      />
                     </div>
                     
                     {/* Step 4: Complete */}
@@ -226,8 +190,8 @@ export function HowItWorks() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                           </svg>
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900 mb-2">Note Saved!</h3>
-                        <p className="text-sm text-slate-500 text-center mb-4">Ready for Sarah Mitchell's next visit</p>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">Saved to Cliniko!</h3>
+                        <p className="text-sm text-slate-500 text-center mb-4">Sarah Mitchell's record updated</p>
                         <div className="px-4 py-2 bg-amber-50 rounded-full">
                           <span className="text-sm font-medium text-amber-700">⏱️ 47 seconds saved</span>
                         </div>

@@ -202,7 +202,7 @@ export function SignupForm({ formRef }: SignupFormProps) {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
                 </span>
-                <span className="text-sm font-semibold text-amber-700">Limited early access spots</span>
+                <span className="text-sm font-semibold text-amber-700">Limited early access for Cliniko users</span>
               </div>
               
               <h2 className="text-3xl md:text-4xl font-display font-black text-slate-900 mb-4">
@@ -210,8 +210,8 @@ export function SignupForm({ formRef }: SignupFormProps) {
               </h2>
               
               <p className="text-lg text-slate-600 max-w-md mx-auto">
-                Join the waitlist and be among the first to transform how you 
-                document patient notes.
+                Join the waitlist and be among the first Cliniko users to 
+                transform how you document treatment notes.
               </p>
             </div>
 
@@ -324,7 +324,7 @@ export function SignupForm({ formRef }: SignupFormProps) {
             {/* Social proof hint */}
             <div className="mt-10 pt-8 border-t border-slate-100 text-center">
               <p className="text-sm text-slate-500">
-                Join <span className="font-semibold text-slate-700">200+</span> clinicians 
+                Join <span className="font-semibold text-slate-700">200+</span> Cliniko users 
                 already on the waitlist
               </p>
             </div>

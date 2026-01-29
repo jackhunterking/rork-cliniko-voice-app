@@ -6,11 +6,11 @@ const trustPoints = [
   {
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
       </svg>
     ),
-    title: 'Privacy-first architecture',
-    description: 'Voice recordings are processed and immediately discarded. Your patient data never leaves your device without your explicit action.',
+    title: 'Official Cliniko API',
+    description: 'We use Cliniko\'s official API for secure integration. Your credentials are encrypted and stored on your device only.',
   },
   {
     icon: (
@@ -24,35 +24,26 @@ const trustPoints = [
   {
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-      </svg>
-    ),
-    title: 'Works offline',
-    description: 'Network issues? No problem. Record and transcribe without an internet connection. Sync when you\'re back online.',
-  },
-  {
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
       </svg>
     ),
-    title: 'Built with clinicians',
-    description: 'Every feature shaped by real practitioner feedback. We obsess over the details that make your workday easier.',
+    title: 'Built with Cliniko users',
+    description: 'Every feature shaped by real Cliniko practitioners. We understand how you work because we built this with you.',
   },
 ];
 
 const faqs = [
   {
-    q: 'How accurate is the transcription?',
-    a: 'Our medical-optimized speech recognition achieves 98%+ accuracy for clinical terminology. Plus, you can always edit before saving.',
+    q: 'How does it connect to my Cliniko account?',
+    a: 'You\'ll generate an API key from your Cliniko settings and enter it once. The app then securely accesses your patients, appointments, and treatment note templates.',
   },
   {
-    q: 'Does it work with my practice management software?',
-    a: 'Yes! Copy formatted notes to your clipboard with one tap, or export in standard formats. Direct integrations coming soon.',
+    q: 'How accurate is the transcription?',
+    a: 'Our medical-optimized speech recognition achieves 98%+ accuracy for clinical terminology. Plus, you can always edit before sending to Cliniko.',
   },
   {
     q: 'What happens during the beta period?',
-    a: 'Early access users get free access while we refine the product. Your feedback directly shapes what we build next.',
+    a: 'Early access users get free access while we refine the Cliniko integration. Your feedback directly shapes what we build next.',
   },
 ];
 

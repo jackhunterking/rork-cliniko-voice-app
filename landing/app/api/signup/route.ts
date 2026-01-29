@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createHash } from 'crypto';
 import { createServerSupabaseClient, EarlyAccessSignup } from '@/lib/supabase';
 
 // Validation schema
@@ -12,14 +11,10 @@ const signupSchema = z.object({
   utm_source: z.string().optional(),
   utm_medium: z.string().optional(),
   utm_campaign: z.string().optional(),
+  test_event_code: z.string().optional(), // For Meta test events
 });
 
-// Hash function for Meta Conversions API (requires SHA-256 hashing)
-function hashForMeta(value: string): string {
-  return createHash('sha256').update(value.toLowerCase().trim()).digest('hex');
-}
-
-// Send event to Meta Conversions API
+// Send event to Meta Conversions API via Supabase Edge Function
 async function sendMetaConversionEvent({
   eventName,
   eventId,
@@ -29,6 +24,7 @@ async function sendMetaConversionEvent({
   pageUrl,
   country,
   profession,
+  testEventCode,
 }: {
   eventName: string;
   eventId?: string;
@@ -38,54 +34,45 @@ async function sendMetaConversionEvent({
   pageUrl?: string;
   country?: string;
   profession?: string;
+  testEventCode?: string;
 }) {
-  const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
-  const accessToken = process.env.META_CONVERSIONS_API_TOKEN;
-
-  if (!pixelId || !accessToken) {
-    console.log('Meta Conversions API not configured - skipping server event');
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  
+  if (!supabaseUrl) {
+    console.log('Supabase URL not configured - skipping Meta conversion event');
     return;
   }
 
-  const eventTime = Math.floor(Date.now() / 1000);
-
-  const eventData = {
-    event_name: eventName,
-    event_time: eventTime,
-    event_id: eventId, // For deduplication with client-side pixel
-    action_source: 'website',
-    event_source_url: pageUrl,
-    user_data: {
-      em: [hashForMeta(email)], // Hashed email
-      client_ip_address: clientIpAddress,
-      client_user_agent: userAgent,
-      country: country ? [hashForMeta(country)] : undefined,
-    },
-    custom_data: {
-      content_name: 'Early Access Signup',
-      content_category: profession,
-    },
-  };
+  const edgeFunctionUrl = `${supabaseUrl}/functions/v1/meta-conversion`;
 
   try {
-    const response = await fetch(
-      `https://graph.facebook.com/v18.0/${pixelId}/events?access_token=${accessToken}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    const response = await fetch(edgeFunctionUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        event_name: eventName,
+        email: email,
+        event_id: eventId,
+        client_ip_address: clientIpAddress,
+        client_user_agent: userAgent,
+        event_source_url: pageUrl,
+        country: country,
+        custom_data: {
+          content_name: 'Early Access Signup',
+          content_category: profession,
         },
-        body: JSON.stringify({
-          data: [eventData],
-        }),
-      }
-    );
+        test_event_code: testEventCode,
+      }),
+    });
+
+    const result = await response.json();
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Meta Conversions API error:', errorData);
+      console.error('Meta Conversions API error:', result);
     } else {
-      console.log('Meta Conversions API: Lead event sent successfully');
+      console.log('Meta Conversions API: Lead event sent successfully', result);
     }
   } catch (error) {
     console.error('Failed to send Meta conversion event:', error);
@@ -106,7 +93,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, profession, country, event_id, utm_source, utm_medium, utm_campaign } =
+    const { email, profession, country, event_id, utm_source, utm_medium, utm_campaign, test_event_code } =
       result.data;
 
     // Get user info from request headers for Meta Conversions API
@@ -160,6 +147,7 @@ export async function POST(request: NextRequest) {
       pageUrl: referer,
       country,
       profession,
+      testEventCode: test_event_code,
     }).catch((err) => console.error('Meta conversion event failed:', err));
 
     // Success response

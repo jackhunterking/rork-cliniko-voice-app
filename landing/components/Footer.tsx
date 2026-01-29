@@ -13,8 +13,8 @@ export function Footer() {
               </svg>
             </div>
             <div>
-              <span className="font-bold text-lg">Voice Notes</span>
-              <span className="text-slate-500 text-sm ml-2">for Clinicians</span>
+              <span className="font-bold text-lg">Cliniko Voice</span>
+              <span className="text-slate-500 text-sm ml-2">Built for Cliniko</span>
             </div>
           </div>
 
@@ -44,13 +44,13 @@ export function Footer() {
         <div className="pt-8 border-t border-slate-800">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-slate-500">
-              © {currentYear} Voice Notes. All rights reserved.
+              © {currentYear} Cliniko Voice. All rights reserved.
             </p>
             
             {/* Disclaimer */}
             <p className="text-xs text-slate-600 text-center md:text-right max-w-lg">
-              Voice Notes is an independent product and is not affiliated with, endorsed by, 
-              or officially connected to any practice management software provider.
+              Cliniko Voice is an independent product designed for Cliniko users. It is not affiliated with, 
+              endorsed by, or officially connected to Cliniko.
             </p>
           </div>
         </div>
