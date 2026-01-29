@@ -95,12 +95,11 @@ export function HowItWorks() {
                 <button
                   key={step.number}
                   onClick={() => setActiveStep(index)}
-                  className={`reveal w-full text-left p-6 rounded-2xl transition-all duration-300 ${
+                  className={`w-full text-left p-6 rounded-2xl transition-all duration-300 ${
                     activeStep === index
                       ? 'bg-white shadow-lg border-2 border-cyan-500'
                       : 'bg-transparent border-2 border-transparent hover:bg-white/50'
                   }`}
-                  style={{ transitionDelay: `${index * 50}ms` }}
                 >
                   <div className="flex items-start gap-4">
                     {/* Step number */}
