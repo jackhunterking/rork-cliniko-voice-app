@@ -6,3 +6,4 @@ export { TrustSection } from './TrustSection';
 export { SignupForm } from './SignupForm';
 export { Footer } from './Footer';
 export { Analytics, trackMetaEvent, trackGAEvent } from './Analytics';
+export { PostHogProvider, capturePostHogEvent, identifyUser, resetPostHogUser } from './PostHogProvider';

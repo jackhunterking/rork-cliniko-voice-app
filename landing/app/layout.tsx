@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Analytics } from '@/components/Analytics';
+import { PostHogProvider } from '@/components/PostHogProvider';
 
 export const metadata: Metadata = {
   title: 'Cliniko Voice | Voice-to-Notes App Built for Cliniko',
@@ -59,8 +60,10 @@ export default function RootLayout({
         <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="anonymous" />
       </head>
       <body className="min-h-screen antialiased">
-        {children}
-        <Analytics />
+        <PostHogProvider>
+          {children}
+          <Analytics />
+        </PostHogProvider>
       </body>
     </html>
   );
