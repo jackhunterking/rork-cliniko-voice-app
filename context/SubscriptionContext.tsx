@@ -9,6 +9,7 @@ import Superwall, {
   SubscriptionStatus,
   SuperwallEventInfo,
   PaywallPresentationHandler,
+  PaywallInfo,
 } from '@superwall/react-native-superwall';
 import { initializeSuperwall, PLACEMENTS } from '@/lib/superwall';
 import { trackEvent, ANALYTICS_EVENTS } from '@/lib/posthog';
@@ -31,11 +32,13 @@ interface SubscriptionProviderProps {
 
 /**
  * Custom Superwall delegate to handle subscription events
+ * Implements all abstract methods from SuperwallDelegate
  */
 class AppSuperwallDelegate extends SuperwallDelegate {
   private onSubscriptionChange: (isActive: boolean) => void;
   private onTrialStarted: () => void;
   private onSubscriptionActivated: () => void;
+  private previousStatus: SubscriptionStatus | null = null;
 
   constructor(
     onSubscriptionChange: (isActive: boolean) => void,
@@ -48,21 +51,20 @@ class AppSuperwallDelegate extends SuperwallDelegate {
     this.onSubscriptionActivated = onSubscriptionActivated;
   }
 
-  subscriptionStatusDidChange(
-    from: SubscriptionStatus,
-    to: SubscriptionStatus
-  ): void {
+  subscriptionStatusDidChange(newValue: SubscriptionStatus): void {
     if (__DEV__) {
-      console.log('[Subscription] Status changed:', from, '->', to);
+      console.log('[Subscription] Status changed:', this.previousStatus, '->', newValue);
     }
 
-    const isActive = to === 'ACTIVE';
+    const isActive = newValue === 'ACTIVE';
     this.onSubscriptionChange(isActive);
 
     // Track analytics for subscription becoming active
-    if (to === 'ACTIVE' && from !== 'ACTIVE') {
+    if (newValue === 'ACTIVE' && this.previousStatus !== 'ACTIVE') {
       this.onSubscriptionActivated();
     }
+    
+    this.previousStatus = newValue;
   }
 
   handleSuperwallEvent(eventInfo: SuperwallEventInfo): void {
@@ -87,6 +89,67 @@ class AppSuperwallDelegate extends SuperwallDelegate {
         break;
       default:
         break;
+    }
+  }
+
+  handleCustomPaywallAction(name: string): void {
+    if (__DEV__) {
+      console.log('[Subscription] Custom paywall action:', name);
+    }
+  }
+
+  willDismissPaywall(paywallInfo: PaywallInfo): void {
+    if (__DEV__) {
+      console.log('[Subscription] Will dismiss paywall:', paywallInfo.name);
+    }
+  }
+
+  willPresentPaywall(paywallInfo: PaywallInfo): void {
+    if (__DEV__) {
+      console.log('[Subscription] Will present paywall:', paywallInfo.name);
+    }
+  }
+
+  didDismissPaywall(paywallInfo: PaywallInfo): void {
+    if (__DEV__) {
+      console.log('[Subscription] Did dismiss paywall:', paywallInfo.name);
+    }
+  }
+
+  didPresentPaywall(paywallInfo: PaywallInfo): void {
+    if (__DEV__) {
+      console.log('[Subscription] Did present paywall:', paywallInfo.name);
+    }
+  }
+
+  paywallWillOpenURL(url: URL): void {
+    if (__DEV__) {
+      console.log('[Subscription] Paywall will open URL:', url.toString());
+    }
+  }
+
+  paywallWillOpenDeepLink(url: URL): void {
+    if (__DEV__) {
+      console.log('[Subscription] Paywall will open deep link:', url.toString());
+    }
+  }
+
+  handleLog(
+    level: string,
+    scope: string,
+    message?: string,
+    info?: Map<string, any>,
+    error?: string
+  ): void {
+    // Only log in development for debugging
+    if (__DEV__) {
+      // Suppress verbose logging - only show warnings and errors
+      if (level === 'warn' || level === 'error') {
+        console.log(`[Superwall ${level}] ${scope}: ${message || ''}`);
+        if (error) {
+          console.log('[Superwall] Error:', error);
+        }
+      }
     }
   }
 }

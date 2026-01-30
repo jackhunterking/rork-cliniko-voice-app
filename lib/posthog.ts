@@ -4,11 +4,40 @@
  */
 
 import PostHog from 'posthog-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // PostHog API key from environment variable
 const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY ?? '';
 
 let posthogInstance: PostHog | null = null;
+
+/**
+ * Custom storage implementation using AsyncStorage
+ * This avoids the deprecated expo-file-system API
+ */
+const customStorage = {
+  async getItem(key: string): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(`posthog_${key}`);
+    } catch {
+      return null;
+    }
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(`posthog_${key}`, value);
+    } catch {
+      // Silently fail
+    }
+  },
+  async removeItem(key: string): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(`posthog_${key}`);
+    } catch {
+      // Silently fail
+    }
+  },
+};
 
 /**
  * Initialize PostHog SDK
@@ -22,6 +51,7 @@ export async function initializePostHog(): Promise<PostHog | null> {
   try {
     posthogInstance = new PostHog(POSTHOG_API_KEY, {
       host: 'https://app.posthog.com',
+      customStorage,
     });
     
     if (__DEV__) {
