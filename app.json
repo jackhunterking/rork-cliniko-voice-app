@@ -55,7 +55,18 @@
       ],
       "expo-font",
       "expo-web-browser",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "2003767340550103",
+          "clientToken": "EAAPksxVUIToBQuWuAifAdsAJi7ARnsNXCAhYCzn4SgPS8OfoQPTmDgi3WzpSbY4QpgYy19izLZAJbZABWI9zZCdkhKhkNagHqNIQbKXChRZAIBZCSKsa8m81GXR2fja3g4kA7mR4vFIfDpQoJkWYt7GS37tYBjLQnLOZClYRvnVeScTANceDOJRCTS2RpzgTghcAZDZD",
+          "displayName": "Cliniko Voice App",
+          "advertiserIDCollectionEnabled": false,
+          "autoLogAppEventsEnabled": true,
+          "isAutoInitEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
