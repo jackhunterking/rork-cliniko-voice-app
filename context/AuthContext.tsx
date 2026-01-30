@@ -15,6 +15,7 @@ import {
 } from '@/lib/secure-storage';
 import { logAuth, errorAuth, maskSecret } from '@/lib/debug';
 import { clinikoKeys } from '@/hooks/useCliniko';
+import { fbEvents } from '@/lib/facebook';
 
 export interface AuthState {
   session: Session | null;
@@ -75,7 +76,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   // Helper function to handle session setup (reused in multiple places)
   // MUST be defined before createSessionFromUrl since it's used there
-  const handleSessionEstablished = useCallback(async (sessionUser: User) => {
+  const handleSessionEstablished = useCallback(async (sessionUser: User, isNewSession = false) => {
     logAuth('Handling session for user:', sessionUser.email);
     
     // Validate Cliniko credentials
@@ -98,6 +99,12 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       
       logAuth(`Cliniko configured: ${isConfigured}`);
       setHasClinikoKey(isConfigured);
+    }
+    
+    // Fire Facebook CompleteRegistration for new sessions from deep links
+    // This covers users signing in via magic link email
+    if (isNewSession) {
+      fbEvents.completeRegistration();
     }
   }, [validateClinikoCredentialOwnership]);
 
@@ -140,7 +147,8 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         logAuth('Session created for user:', data.session.user.email);
         setSession(data.session);
         setUser(data.session.user);
-        await handleSessionEstablished(data.session.user);
+        // This is a new session from deep link - track registration
+        await handleSessionEstablished(data.session.user, true);
       }
     } catch (error) {
       errorAuth('Error processing deep link:', error);
@@ -174,7 +182,8 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
               logAuth('Session created from deep link for user:', data.session.user.email);
               setSession(data.session);
               setUser(data.session.user);
-              await handleSessionEstablished(data.session.user);
+              // This is a new session from deep link - track registration
+              await handleSessionEstablished(data.session.user, true);
               setIsLoading(false);
               return; // Done - session established from deep link
             }
@@ -300,6 +309,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       if (!error && data.session) {
         await validateClinikoCredentialOwnership(data.session.user.id);
         await refreshClinikoKeyStatus();
+        
+        // Fire Facebook CompleteRegistration event for attribution
+        fbEvents.completeRegistration();
       }
       
       return { error };

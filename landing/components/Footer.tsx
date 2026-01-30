@@ -21,19 +21,13 @@ export function Footer() {
           {/* Links */}
           <div className="flex items-center gap-6 text-sm">
             <a
-              href="mailto:hello@voicenotes.app"
-              className="text-slate-400 hover:text-white transition-colors"
-            >
-              Contact
-            </a>
-            <a
-              href="#"
+              href="/privacy"
               className="text-slate-400 hover:text-white transition-colors"
             >
               Privacy
             </a>
             <a
-              href="#"
+              href="/terms"
               className="text-slate-400 hover:text-white transition-colors"
             >
               Terms

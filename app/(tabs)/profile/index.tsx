@@ -20,10 +20,12 @@ import {
   Trash2,
   RefreshCw,
   Bug,
+  Clock,
 } from 'lucide-react-native';
 import { colors, spacing, radius } from '@/constants/colors';
 import { useAuth } from '@/context/AuthContext';
 import { useClinikoUser, useClinikoCache } from '@/hooks/useCliniko';
+import { useUsageStats } from '@/hooks/useUsageStats';
 
 interface MenuItemProps {
   icon: React.ReactNode;
@@ -94,6 +96,9 @@ export default function SettingsScreen() {
   });
 
   const clinikoCache = useClinikoCache();
+  
+  // Fetch usage stats
+  const { totalMinutes, isLoading: isLoadingUsageStats } = useUsageStats();
 
   // Get user display info
   const supabaseDisplayName = user?.user_metadata?.full_name || 'User';
@@ -177,6 +182,23 @@ export default function SettingsScreen() {
           </View>
           <ChevronRight size={20} color={colors.textSecondary} />
         </TouchableOpacity>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Usage</Text>
+          <View style={styles.menuCard}>
+            <View style={styles.usageRow}>
+              <Clock size={20} color={colors.textSecondary} />
+              <View style={styles.usageContent}>
+                <Text style={styles.usageLabel}>Total Recorded</Text>
+                {isLoadingUsageStats ? (
+                  <ActivityIndicator size="small" color={colors.textSecondary} />
+                ) : (
+                  <Text style={styles.usageValue}>{totalMinutes} minutes</Text>
+                )}
+              </View>
+            </View>
+          </View>
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Cliniko</Text>
@@ -443,5 +465,24 @@ const styles = StyleSheet.create({
   },
   spinning: {
     opacity: 0.5,
+  },
+  usageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm + 4,
+  },
+  usageContent: {
+    flex: 1,
+  },
+  usageLabel: {
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  usageValue: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
 });

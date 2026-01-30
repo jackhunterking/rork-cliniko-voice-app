@@ -92,7 +92,7 @@ export function Hero({ onCtaClick }: HeroProps) {
               {[
                 { icon: '🔗', text: 'Native Cliniko integration' },
                 { icon: '🔒', text: 'HIPAA-ready security' },
-                { icon: '⚡', text: 'Works offline' },
+                { icon: '🎯', text: '98% transcription accuracy' },
               ].map((item) => (
                 <div key={item.text} className="flex items-center gap-2 text-sm text-slate-600">
                   <span className="text-base">{item.icon}</span>

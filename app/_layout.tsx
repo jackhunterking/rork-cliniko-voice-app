@@ -5,11 +5,18 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NoteProvider } from "@/context/NoteContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { SubscriptionProvider } from "@/context/SubscriptionContext";
 import { colors } from "@/constants/colors";
 import { logRouter } from "@/lib/debug";
+import { initializePostHog } from "@/lib/posthog";
+import { initializeFacebook } from "@/lib/facebook";
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
+
+// Initialize analytics SDKs early
+initializePostHog();
+initializeFacebook();
 
 const queryClient = new QueryClient();
 
@@ -135,11 +142,13 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <AuthProvider>
-          <NoteProvider>
-            <AuthGuard>
-              <RootLayoutNav />
-            </AuthGuard>
-          </NoteProvider>
+          <SubscriptionProvider>
+            <NoteProvider>
+              <AuthGuard>
+                <RootLayoutNav />
+              </AuthGuard>
+            </NoteProvider>
+          </SubscriptionProvider>
         </AuthProvider>
       </GestureHandlerRootView>
     </QueryClientProvider>

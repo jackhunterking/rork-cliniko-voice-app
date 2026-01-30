@@ -19,18 +19,23 @@ import Animated, {
   SlideInUp,
   Layout,
 } from 'react-native-reanimated';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, Clock } from 'lucide-react-native';
 import { TeleprompterTranscript } from '@/components/TeleprompterTranscript';
 import { RecordingControlBar } from '@/components/RecordingControlBar';
 import { useRecordingSession } from '@/hooks/useRecordingSession';
+import { useUsageStats } from '@/hooks/useUsageStats';
 import { useNote } from '@/context/NoteContext';
+import { useSubscription } from '@/context/SubscriptionContext';
 import { colors, spacing } from '@/constants/colors';
 import { RECORDING_STATE_LABELS } from '@/types/streaming';
+import { trackEvent, ANALYTICS_EVENTS } from '@/lib/posthog';
 
 export default function LiveRecordingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { noteData, appendToField } = useNote();
+  const { registerGatedAction } = useSubscription();
+  const { addRecordedMinutes } = useUsageStats();
 
   const {
     recordingState,
@@ -39,6 +44,7 @@ export default function LiveRecordingScreen() {
     finalText,
     partialText,
     error,
+    lastSessionDurationMs,
     startRecording,
     stopRecording,
     cancelRecording,
@@ -51,6 +57,20 @@ export default function LiveRecordingScreen() {
       ]);
     },
   });
+
+  // Track usage when recording session ends
+  useEffect(() => {
+    if (lastSessionDurationMs > 0 && recordingState === 'done') {
+      // Convert ms to minutes, rounding up
+      const minutes = Math.ceil(lastSessionDurationMs / 60000);
+      if (minutes > 0) {
+        addRecordedMinutes(minutes);
+        if (__DEV__) {
+          console.log(`[Live] Recorded ${minutes} minutes, tracking usage...`);
+        }
+      }
+    }
+  }, [lastSessionDurationMs, recordingState, addRecordedMinutes]);
 
   // Handle back/cancel
   const handleCancel = useCallback(async () => {
@@ -121,14 +141,23 @@ export default function LiveRecordingScreen() {
     }
   }, [finalText, partialText, isRecording, stopRecording, noteData, appendToField, router]);
 
-  // Handle record button press
+  // Handle record button press - gated via Superwall
   const handleRecordPress = useCallback(async () => {
     if (isRecording) {
+      // Stopping recording is not gated
       await stopRecording();
     } else {
-      await startRecording();
+      // Track that user attempted to record
+      trackEvent(ANALYTICS_EVENTS.RECORD_ATTEMPTED);
+      
+      // Use Superwall register to gate recording
+      // If user is subscribed, startRecording() is called immediately
+      // If not, paywall is shown; on success, startRecording() is called
+      await registerGatedAction(async () => {
+        await startRecording();
+      });
     }
-  }, [isRecording, startRecording, stopRecording]);
+  }, [isRecording, startRecording, stopRecording, registerGatedAction]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -200,6 +229,12 @@ export default function LiveRecordingScreen() {
           <Text style={styles.patientBadgeName}>{noteData.patient.name}</Text>
         </Animated.View>
       )}
+
+      {/* Recording limit pill */}
+      <View style={styles.limitPill}>
+        <Clock size={12} color={colors.textSecondary} />
+        <Text style={styles.limitPillText}>Max 30 minutes per session</Text>
+      </View>
 
       {/* Teleprompter Transcript */}
       <View style={styles.transcriptContainer}>
@@ -301,6 +336,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.primary,
+  },
+  limitPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    gap: 6,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  limitPillText: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
   transcriptContainer: {
     flex: 1,

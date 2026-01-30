@@ -42,8 +42,8 @@ const faqs = [
     a: 'Our medical-optimized speech recognition achieves 98%+ accuracy for clinical terminology. Plus, you can always edit before sending to Cliniko.',
   },
   {
-    q: 'What happens during the beta period?',
-    a: 'Early access users get free access while we refine the Cliniko integration. Your feedback directly shapes what we build next.',
+    q: 'How much does it cost?',
+    a: 'We offer flexible subscription plans designed for healthcare professionals. Early access members get special founding member pricing. Sign up to learn more about our plans.',
   },
 ];
 

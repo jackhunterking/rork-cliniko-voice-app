@@ -14,6 +14,9 @@ import { liveAudioStream } from '@/services/live-audio-stream';
 import { supabase } from '@/lib/supabase';
 import { useSettingsStore } from '@/stores/settings-store';
 
+// Maximum recording duration: 30 minutes
+const MAX_RECORDING_DURATION_MS = 30 * 60 * 1000;
+
 interface UseRecordingSessionOptions {
   /** Called when recording state changes */
   onStateChange?: (state: RecordingState) => void;
@@ -38,6 +41,8 @@ interface UseRecordingSessionReturn {
   combinedText: string;
   /** Error message if any */
   error: string | null;
+  /** Duration of last completed recording session in milliseconds */
+  lastSessionDurationMs: number;
   /** Start recording */
   startRecording: () => Promise<void>;
   /** Stop recording */
@@ -63,10 +68,13 @@ export function useRecordingSession(
   const [finalText, setFinalText] = useState('');
   const [partialText, setPartialText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [lastSessionDurationMs, setLastSessionDurationMs] = useState(0);
 
   // Refs for cleanup
   const isCleaningUp = useRef(false);
   const permissionsGranted = useRef(false);
+  const durationCheckInterval = useRef<NodeJS.Timeout | null>(null);
+  const recordingStartTime = useRef<number | null>(null);
 
   // Update state and notify
   const updateState = useCallback(
@@ -173,6 +181,9 @@ export function useRecordingSession(
     };
   }, [onError]);
 
+  // Reference to stopRecording for use in duration check
+  const stopRecordingRef = useRef<(() => Promise<void>) | null>(null);
+
   // Start recording - optimized for instant start when preconnected
   const startRecording = useCallback(async () => {
     if (isRecording || isCleaningUp.current) {
@@ -197,6 +208,9 @@ export function useRecordingSession(
       // Set state immediately so UI responds
       updateState('listening');
       setIsRecording(true);
+      
+      // Track recording start time for duration limit
+      recordingStartTime.current = Date.now();
 
       // Initialize live audio stream (fast, usually already done)
       await liveAudioStream.initialize();
@@ -220,6 +234,22 @@ export function useRecordingSession(
       await liveAudioStream.start();
       if (__DEV__) console.log('[Recording] Audio stream started');
 
+      // Start duration monitoring for 30-minute limit
+      durationCheckInterval.current = setInterval(() => {
+        if (recordingStartTime.current) {
+          const elapsed = Date.now() - recordingStartTime.current;
+          if (elapsed >= MAX_RECORDING_DURATION_MS) {
+            if (__DEV__) console.log('[Recording] 30-minute limit reached, auto-stopping...');
+            // Give haptic warning
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            // Auto-stop recording
+            if (stopRecordingRef.current) {
+              stopRecordingRef.current();
+            }
+          }
+        }
+      }, 1000); // Check every second
+
       if (__DEV__) console.log('[Recording] Started successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to start recording';
@@ -232,6 +262,11 @@ export function useRecordingSession(
       await liveAudioStream.stop();
       await assemblyaiStreaming.disconnect();
       setIsRecording(false);
+      recordingStartTime.current = null;
+      if (durationCheckInterval.current) {
+        clearInterval(durationCheckInterval.current);
+        durationCheckInterval.current = null;
+      }
     }
   }, [isRecording, onError, requestPermissions, updateState]);
 
@@ -243,6 +278,17 @@ export function useRecordingSession(
 
     if (__DEV__) console.log('[Recording] Stopping...');
     isCleaningUp.current = true;
+
+    // Calculate session duration before clearing the start time
+    const sessionDuration = recordingStartTime.current 
+      ? Date.now() - recordingStartTime.current 
+      : 0;
+
+    // Clear duration check interval
+    if (durationCheckInterval.current) {
+      clearInterval(durationCheckInterval.current);
+      durationCheckInterval.current = null;
+    }
 
     try {
       // Haptic feedback
@@ -268,10 +314,15 @@ export function useRecordingSession(
         console.log('[Recording] Stopped');
         console.log('[Recording] Final transcript:', transcript.finalText);
         console.log('[Recording] Chunks sent:', stats.chunksSent);
+        console.log('[Recording] Session duration:', Math.round(sessionDuration / 1000), 'seconds');
       }
 
       setFinalText(transcript.finalText);
       setPartialText('');
+      recordingStartTime.current = null;
+      
+      // Store the session duration for usage tracking
+      setLastSessionDurationMs(sessionDuration);
 
       // If we have any transcript, mark as done
       if (transcript.finalText) {
@@ -292,6 +343,11 @@ export function useRecordingSession(
     }
   }, [isRecording, onError, updateState]);
 
+  // Keep stopRecording ref updated for use in interval callback
+  useEffect(() => {
+    stopRecordingRef.current = stopRecording;
+  }, [stopRecording]);
+
   // Cancel recording
   const cancelRecording = useCallback(async () => {
     if (isCleaningUp.current) {
@@ -300,6 +356,12 @@ export function useRecordingSession(
 
     if (__DEV__) console.log('[Recording] Cancelling...');
     isCleaningUp.current = true;
+
+    // Clear duration check interval
+    if (durationCheckInterval.current) {
+      clearInterval(durationCheckInterval.current);
+      durationCheckInterval.current = null;
+    }
 
     try {
       // Haptic feedback
@@ -318,6 +380,7 @@ export function useRecordingSession(
       setPartialText('');
       setAmplitude(0);
       setError(null);
+      recordingStartTime.current = null;
       updateState('idle');
 
       if (__DEV__) console.log('[Recording] Cancelled');
@@ -368,6 +431,11 @@ export function useRecordingSession(
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Clear duration check interval
+      if (durationCheckInterval.current) {
+        clearInterval(durationCheckInterval.current);
+        durationCheckInterval.current = null;
+      }
       if (isRecording) {
         liveAudioStream.stop();
         assemblyaiStreaming.disconnect();
@@ -388,6 +456,7 @@ export function useRecordingSession(
     partialText,
     combinedText,
     error,
+    lastSessionDurationMs,
     startRecording,
     stopRecording,
     cancelRecording,
