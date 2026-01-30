@@ -218,6 +218,9 @@ export default function TermsPage() {
               <Link href="/terms" className="text-cyan-400 hover:text-white transition-colors">
                 Terms
               </Link>
+              <Link href="/deletion" className="text-slate-400 hover:text-white transition-colors">
+                Data Deletion
+              </Link>
             </div>
           </div>
         </div>
