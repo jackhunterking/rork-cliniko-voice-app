@@ -21,6 +21,7 @@ import {
   RefreshCw,
   Bug,
   Clock,
+  CreditCard,
 } from 'lucide-react-native';
 import { colors, spacing, radius } from '@/constants/colors';
 import { useAuth } from '@/context/AuthContext';
@@ -281,6 +282,18 @@ export default function SettingsScreen() {
               icon={<Trash2 size={20} color={colors.textSecondary} />}
               label="Delete my data"
               onPress={() => router.push('/settings/delete-data')}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Developer</Text>
+          <View style={styles.menuCard}>
+            <MenuItem
+              icon={<CreditCard size={20} color={colors.primary} />}
+              label="Preview Paywall Design"
+              subtitle="View the conversion-optimized paywall"
+              onPress={() => router.push('/settings/paywall-preview')}
             />
           </View>
         </View>

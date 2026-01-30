@@ -15,21 +15,33 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.rork.cliniko-voice-app",
+      "bundleIdentifier": "app.cliniko-voice",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Cliniko Voice needs access to your microphone to transcribe your clinical notes in real-time.",
         "UIBackgroundModes": [
           "audio"
+        ],
+        "SKAdNetworkItems": [
+          {
+            "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "n38lu8286q.skadnetwork"
+          }
         ]
       },
-      "appleTeamId": "6G65A4B7Y5"
+      "appleTeamId": "6G65A4B7Y5",
+      "usesAppleSignIn": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#007FA3"
       },
-      "package": "app.rork.cliniko_voice_app"
+      "package": "app.cliniko_voice"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -47,6 +59,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
     }
   }
 }

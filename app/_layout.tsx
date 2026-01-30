@@ -132,6 +132,13 @@ function RootLayoutNav() {
       <Stack.Screen name="settings/delete-data" options={{ title: "Delete My Data" }} />
       <Stack.Screen name="settings/delete-data/success" options={{ headerShown: false }} />
       <Stack.Screen name="settings/diagnostics" options={{ title: "Diagnostics" }} />
+      <Stack.Screen 
+        name="settings/paywall-preview" 
+        options={{ 
+          headerShown: false,
+          presentation: 'fullScreenModal',
+        }} 
+      />
       <Stack.Screen name="+not-found" />
     </Stack>
   );
