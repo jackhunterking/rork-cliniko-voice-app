@@ -5,23 +5,86 @@ import { trackMetaEvent, trackGAEvent, generateEventId } from './Analytics';
 
 const professions = [
   { value: '', label: 'Select your profession' },
+  // Physical Therapy & Movement
   { value: 'physiotherapist', label: 'Physiotherapist' },
+  { value: 'physical_therapist', label: 'Physical Therapist' },
   { value: 'chiropractor', label: 'Chiropractor' },
   { value: 'osteopath', label: 'Osteopath' },
+  { value: 'exercise_physiologist', label: 'Exercise Physiologist' },
+  { value: 'sports_therapist', label: 'Sports Therapist' },
+  { value: 'athletic_trainer', label: 'Athletic Trainer' },
+  { value: 'rehabilitation_specialist', label: 'Rehabilitation Specialist' },
+  { value: 'pilates_instructor', label: 'Clinical Pilates Instructor' },
+  { value: 'kinesiologist', label: 'Kinesiologist' },
+  // Mental Health
+  { value: 'psychologist', label: 'Psychologist' },
+  { value: 'counsellor', label: 'Counsellor / Therapist' },
+  { value: 'clinical_psychologist', label: 'Clinical Psychologist' },
+  { value: 'social_worker', label: 'Social Worker' },
+  { value: 'mental_health_nurse', label: 'Mental Health Nurse' },
+  { value: 'art_therapist', label: 'Art Therapist' },
+  { value: 'music_therapist', label: 'Music Therapist' },
+  { value: 'play_therapist', label: 'Play Therapist' },
+  // Occupational & Speech
   { value: 'occupational_therapist', label: 'Occupational Therapist' },
   { value: 'speech_pathologist', label: 'Speech Pathologist' },
-  { value: 'psychologist', label: 'Psychologist' },
+  { value: 'speech_therapist', label: 'Speech Therapist' },
+  { value: 'audiologist', label: 'Audiologist' },
+  // Foot & Lower Limb
   { value: 'podiatrist', label: 'Podiatrist' },
+  { value: 'chiropodist', label: 'Chiropodist' },
+  { value: 'pedorthist', label: 'Pedorthist' },
+  // Hands & Upper Limb
+  { value: 'hand_therapist', label: 'Hand Therapist' },
+  // Massage & Bodywork
   { value: 'massage_therapist', label: 'Massage Therapist' },
-  { value: 'exercise_physiologist', label: 'Exercise Physiologist' },
+  { value: 'myotherapist', label: 'Myotherapist' },
+  { value: 'remedial_massage_therapist', label: 'Remedial Massage Therapist' },
+  { value: 'craniosacral_therapist', label: 'Craniosacral Therapist' },
+  { value: 'lymphatic_drainage_therapist', label: 'Lymphatic Drainage Therapist' },
+  { value: 'bowen_therapist', label: 'Bowen Therapist' },
+  // Nutrition & Dietetics
   { value: 'dietitian', label: 'Dietitian' },
-  { value: 'other', label: 'Other Allied Health' },
+  { value: 'nutritionist', label: 'Nutritionist' },
+  { value: 'sports_dietitian', label: 'Sports Dietitian' },
+  // Nursing & Medical
+  { value: 'nurse_practitioner', label: 'Nurse Practitioner' },
+  { value: 'registered_nurse', label: 'Registered Nurse' },
+  { value: 'practice_nurse', label: 'Practice Nurse' },
+  { value: 'wound_care_nurse', label: 'Wound Care Nurse' },
+  { value: 'diabetes_educator', label: 'Diabetes Educator' },
+  // Traditional & Complementary
+  { value: 'acupuncturist', label: 'Acupuncturist' },
+  { value: 'traditional_chinese_medicine', label: 'Traditional Chinese Medicine Practitioner' },
+  { value: 'naturopath', label: 'Naturopath' },
+  { value: 'homeopath', label: 'Homeopath' },
+  { value: 'herbalist', label: 'Herbalist' },
+  { value: 'ayurvedic_practitioner', label: 'Ayurvedic Practitioner' },
+  // Vision & Eye Care
+  { value: 'optometrist', label: 'Optometrist' },
+  { value: 'orthoptist', label: 'Orthoptist' },
+  { value: 'vision_therapist', label: 'Vision Therapist' },
+  // Other Specialists
+  { value: 'sonographer', label: 'Sonographer' },
+  { value: 'radiographer', label: 'Radiographer' },
+  { value: 'sleep_technologist', label: 'Sleep Technologist' },
+  { value: 'respiratory_therapist', label: 'Respiratory Therapist' },
+  { value: 'orthotist_prosthetist', label: 'Orthotist / Prosthetist' },
+  { value: 'pelvic_floor_therapist', label: 'Pelvic Floor Therapist' },
+  { value: 'womens_health_physio', label: "Women's Health Physiotherapist" },
+  { value: 'paediatric_therapist', label: 'Paediatric Therapist' },
+  { value: 'geriatric_specialist', label: 'Geriatric Specialist' },
+  { value: 'neurological_therapist', label: 'Neurological Therapist' },
+  { value: 'vestibular_therapist', label: 'Vestibular Therapist' },
+  { value: 'hydrotherapist', label: 'Hydrotherapist' },
+  { value: 'other', label: 'Other (please specify)' },
 ];
 
 const countries = [
   { value: '', label: 'Select your country' },
   { value: 'AU', label: '🇦🇺 Australia' },
   { value: 'NZ', label: '🇳🇿 New Zealand' },
+  { value: 'ZA', label: '🇿🇦 South Africa' },
   { value: 'UK', label: '🇬🇧 United Kingdom' },
   { value: 'US', label: '🇺🇸 United States' },
   { value: 'CA', label: '🇨🇦 Canada' },
@@ -37,6 +100,7 @@ interface SignupFormProps {
 export function SignupForm({ formRef }: SignupFormProps) {
   const [email, setEmail] = useState('');
   const [profession, setProfession] = useState('');
+  const [otherProfession, setOtherProfession] = useState('');
   const [country, setCountry] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -82,6 +146,11 @@ export function SignupForm({ formRef }: SignupFormProps) {
       return;
     }
 
+    if (profession === 'other' && !otherProfession.trim()) {
+      setError('Please specify your profession');
+      return;
+    }
+
     if (!email.includes('@') || !email.includes('.')) {
       setError('Please enter a valid email address');
       return;
@@ -93,13 +162,16 @@ export function SignupForm({ formRef }: SignupFormProps) {
     // This same ID is sent to both client-side pixel AND server-side Conversions API
     const eventId = generateEventId();
 
+    // Use the custom profession text if "other" is selected
+    const finalProfession = profession === 'other' ? `other: ${otherProfession.trim()}` : profession;
+
     try {
       const response = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
-          profession,
+          profession: finalProfession,
           country,
           event_id: eventId, // Pass event_id to server for Conversions API deduplication
           ...getUtmParams(),
@@ -115,12 +187,12 @@ export function SignupForm({ formRef }: SignupFormProps) {
       // Track client-side with the SAME event_id for deduplication
       trackMetaEvent('Lead', {
         content_name: 'Early Access Signup',
-        content_category: profession,
+        content_category: finalProfession,
         country,
       }, eventId); // Pass eventId for deduplication with server-side event
       trackGAEvent('generate_lead', {
         event_category: 'signup',
-        event_label: profession,
+        event_label: finalProfession,
       });
 
       setQueuePosition(Math.floor(Math.random() * 150) + 80);
@@ -243,7 +315,12 @@ export function SignupForm({ formRef }: SignupFormProps) {
                 <select
                   id="profession"
                   value={profession}
-                  onChange={(e) => setProfession(e.target.value)}
+                  onChange={(e) => {
+                    setProfession(e.target.value);
+                    if (e.target.value !== 'other') {
+                      setOtherProfession('');
+                    }
+                  }}
                   className="input appearance-none cursor-pointer"
                   style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
@@ -260,6 +337,24 @@ export function SignupForm({ formRef }: SignupFormProps) {
                   ))}
                 </select>
               </div>
+
+              {/* Other Profession Text Input - shown when "Other" is selected */}
+              {profession === 'other' && (
+                <div>
+                  <label htmlFor="otherProfession" className="label">Please specify your profession</label>
+                  <input
+                    type="text"
+                    id="otherProfession"
+                    value={otherProfession}
+                    onChange={(e) => setOtherProfession(e.target.value)}
+                    placeholder="e.g., Lymphedema Therapist, Cranial Osteopath..."
+                    className="input"
+                    required
+                    disabled={isSubmitting}
+                    maxLength={100}
+                  />
+                </div>
+              )}
 
               {/* Country */}
               <div>
