@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, FormEvent } from 'react';
-import { trackMetaEvent, trackGAEvent } from './Analytics';
+import { trackMetaEvent, trackGAEvent, generateEventId } from './Analytics';
 
 const professions = [
   { value: '', label: 'Select your profession' },
@@ -89,6 +89,10 @@ export function SignupForm({ formRef }: SignupFormProps) {
 
     setIsSubmitting(true);
 
+    // Generate a unique event ID for Facebook deduplication
+    // This same ID is sent to both client-side pixel AND server-side Conversions API
+    const eventId = generateEventId();
+
     try {
       const response = await fetch('/api/signup', {
         method: 'POST',
@@ -97,6 +101,7 @@ export function SignupForm({ formRef }: SignupFormProps) {
           email,
           profession,
           country,
+          event_id: eventId, // Pass event_id to server for Conversions API deduplication
           ...getUtmParams(),
         }),
       });
@@ -107,11 +112,12 @@ export function SignupForm({ formRef }: SignupFormProps) {
         throw new Error(data.error || 'Something went wrong');
       }
 
+      // Track client-side with the SAME event_id for deduplication
       trackMetaEvent('Lead', {
         content_name: 'Early Access Signup',
         content_category: profession,
         country,
-      });
+      }, eventId); // Pass eventId for deduplication with server-side event
       trackGAEvent('generate_lead', {
         event_category: 'signup',
         event_label: profession,
