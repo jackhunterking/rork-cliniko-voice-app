@@ -1,25 +1,44 @@
 /**
  * Subscription Context
  * Manages subscription state via Superwall and provides gating functionality
+ * 
+ * NOTE: This context handles cases where Superwall native module isn't available
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import Superwall, {
-  SuperwallDelegate,
-  SubscriptionStatus,
-  SuperwallEventInfo,
-  PaywallPresentationHandler,
-  PaywallInfo,
-} from '@superwall/react-native-superwall';
-import { initializeSuperwall, PLACEMENTS } from '@/lib/superwall';
+import { initializeSuperwall, PLACEMENTS, isSuperwallReady, getSuperwallShared } from '@/lib/superwall';
 import { trackEvent, ANALYTICS_EVENTS } from '@/lib/posthog';
 import { fbEvents } from '@/lib/facebook';
+
+// Lazy-loaded Superwall types - we'll check if they're available at runtime
+let SuperwallDelegate: any = null;
+let PaywallPresentationHandler: any = null;
+
+function getSuperwallTypes(): boolean {
+  if (SuperwallDelegate && PaywallPresentationHandler) {
+    return true;
+  }
+  
+  try {
+    const superwallModule = require('@superwall/react-native-superwall');
+    SuperwallDelegate = superwallModule.SuperwallDelegate;
+    PaywallPresentationHandler = superwallModule.PaywallPresentationHandler;
+    return true;
+  } catch (error) {
+    if (__DEV__) {
+      console.log('[Subscription] Superwall types not available');
+    }
+    return false;
+  }
+}
 
 interface SubscriptionContextType {
   /** Whether the user has an active subscription (includes trial) */
   isSubscribed: boolean;
   /** Whether subscription status is still being determined */
   isLoading: boolean;
+  /** Whether Superwall is available */
+  isSuperwallAvailable: boolean;
   /** Register a gated action - shows paywall if not subscribed */
   registerGatedAction: (onSuccess: () => void | Promise<void>) => Promise<void>;
 }
@@ -31,132 +50,148 @@ interface SubscriptionProviderProps {
 }
 
 /**
- * Custom Superwall delegate to handle subscription events
- * Implements all abstract methods from SuperwallDelegate
+ * Create a custom Superwall delegate if available
  */
-class AppSuperwallDelegate extends SuperwallDelegate {
-  private onSubscriptionChange: (isActive: boolean) => void;
-  private onTrialStarted: () => void;
-  private onSubscriptionActivated: () => void;
-  private previousStatus: SubscriptionStatus | null = null;
-
-  constructor(
-    onSubscriptionChange: (isActive: boolean) => void,
-    onTrialStarted: () => void,
-    onSubscriptionActivated: () => void
-  ) {
-    super();
-    this.onSubscriptionChange = onSubscriptionChange;
-    this.onTrialStarted = onTrialStarted;
-    this.onSubscriptionActivated = onSubscriptionActivated;
+function createAppSuperwallDelegate(
+  onSubscriptionChange: (isActive: boolean) => void,
+  onTrialStarted: () => void,
+  onSubscriptionActivated: () => void
+): any {
+  if (!getSuperwallTypes() || !SuperwallDelegate) {
+    return null;
   }
 
-  subscriptionStatusDidChange(newValue: SubscriptionStatus): void {
-    if (__DEV__) {
-      console.log('[Subscription] Status changed:', this.previousStatus, '->', newValue);
-    }
+  try {
+    // Dynamically create the delegate class
+    class AppSuperwallDelegate extends SuperwallDelegate {
+      private onSubscriptionChange: (isActive: boolean) => void;
+      private onTrialStarted: () => void;
+      private onSubscriptionActivated: () => void;
+      private previousStatus: string | null = null;
 
-    const isActive = newValue === 'ACTIVE';
-    this.onSubscriptionChange(isActive);
+      constructor() {
+        super();
+        this.onSubscriptionChange = onSubscriptionChange;
+        this.onTrialStarted = onTrialStarted;
+        this.onSubscriptionActivated = onSubscriptionActivated;
+      }
 
-    // Track analytics for subscription becoming active
-    if (newValue === 'ACTIVE' && this.previousStatus !== 'ACTIVE') {
-      this.onSubscriptionActivated();
-    }
-    
-    this.previousStatus = newValue;
-  }
-
-  handleSuperwallEvent(eventInfo: SuperwallEventInfo): void {
-    const eventType = eventInfo.event?.type;
-    
-    if (__DEV__) {
-      console.log('[Subscription] Superwall event:', eventType);
-    }
-
-    // Handle specific events for analytics
-    switch (eventType) {
-      case 'paywallOpen':
-        trackEvent(ANALYTICS_EVENTS.PAYWALL_SHOWN);
-        break;
-      case 'transactionComplete':
-        // Check if this was a trial start
-        const transaction = eventInfo.event as { type: string; product?: { subscriptionPeriod?: string } };
-        if (transaction?.product?.subscriptionPeriod) {
-          // This indicates a subscription was purchased
-          this.onTrialStarted();
+      subscriptionStatusDidChange(newValue: string): void {
+        if (__DEV__) {
+          console.log('[Subscription] Status changed:', this.previousStatus, '->', newValue);
         }
-        break;
-      default:
-        break;
-    }
-  }
 
-  handleCustomPaywallAction(name: string): void {
-    if (__DEV__) {
-      console.log('[Subscription] Custom paywall action:', name);
-    }
-  }
+        const isActive = newValue === 'ACTIVE';
+        this.onSubscriptionChange(isActive);
 
-  willDismissPaywall(paywallInfo: PaywallInfo): void {
-    if (__DEV__) {
-      console.log('[Subscription] Will dismiss paywall:', paywallInfo.name);
-    }
-  }
+        // Track analytics for subscription becoming active
+        if (newValue === 'ACTIVE' && this.previousStatus !== 'ACTIVE') {
+          this.onSubscriptionActivated();
+        }
+        
+        this.previousStatus = newValue;
+      }
 
-  willPresentPaywall(paywallInfo: PaywallInfo): void {
-    if (__DEV__) {
-      console.log('[Subscription] Will present paywall:', paywallInfo.name);
-    }
-  }
+      handleSuperwallEvent(eventInfo: any): void {
+        const eventType = eventInfo.event?.type;
+        
+        if (__DEV__) {
+          console.log('[Subscription] Superwall event:', eventType);
+        }
 
-  didDismissPaywall(paywallInfo: PaywallInfo): void {
-    if (__DEV__) {
-      console.log('[Subscription] Did dismiss paywall:', paywallInfo.name);
-    }
-  }
+        // Handle specific events for analytics
+        switch (eventType) {
+          case 'paywallOpen':
+            trackEvent(ANALYTICS_EVENTS.PAYWALL_SHOWN);
+            break;
+          case 'transactionComplete':
+            // Check if this was a trial start
+            const transaction = eventInfo.event;
+            if (transaction?.product?.subscriptionPeriod) {
+              // This indicates a subscription was purchased
+              this.onTrialStarted();
+            }
+            break;
+          default:
+            break;
+        }
+      }
 
-  didPresentPaywall(paywallInfo: PaywallInfo): void {
-    if (__DEV__) {
-      console.log('[Subscription] Did present paywall:', paywallInfo.name);
-    }
-  }
+      handleCustomPaywallAction(name: string): void {
+        if (__DEV__) {
+          console.log('[Subscription] Custom paywall action:', name);
+        }
+      }
 
-  paywallWillOpenURL(url: URL): void {
-    if (__DEV__) {
-      console.log('[Subscription] Paywall will open URL:', url.toString());
-    }
-  }
+      willDismissPaywall(paywallInfo: any): void {
+        if (__DEV__) {
+          console.log('[Subscription] Will dismiss paywall:', paywallInfo?.name);
+        }
+      }
 
-  paywallWillOpenDeepLink(url: URL): void {
-    if (__DEV__) {
-      console.log('[Subscription] Paywall will open deep link:', url.toString());
-    }
-  }
+      willPresentPaywall(paywallInfo: any): void {
+        if (__DEV__) {
+          console.log('[Subscription] Will present paywall:', paywallInfo?.name);
+        }
+      }
 
-  handleLog(
-    level: string,
-    scope: string,
-    message?: string,
-    info?: Map<string, any>,
-    error?: string
-  ): void {
-    // Only log in development for debugging
-    if (__DEV__) {
-      // Suppress verbose logging - only show warnings and errors
-      if (level === 'warn' || level === 'error') {
-        console.log(`[Superwall ${level}] ${scope}: ${message || ''}`);
-        if (error) {
-          console.log('[Superwall] Error:', error);
+      didDismissPaywall(paywallInfo: any): void {
+        if (__DEV__) {
+          console.log('[Subscription] Did dismiss paywall:', paywallInfo?.name);
+        }
+      }
+
+      didPresentPaywall(paywallInfo: any): void {
+        if (__DEV__) {
+          console.log('[Subscription] Did present paywall:', paywallInfo?.name);
+        }
+      }
+
+      paywallWillOpenURL(url: any): void {
+        if (__DEV__) {
+          console.log('[Subscription] Paywall will open URL:', url?.toString?.());
+        }
+      }
+
+      paywallWillOpenDeepLink(url: any): void {
+        if (__DEV__) {
+          console.log('[Subscription] Paywall will open deep link:', url?.toString?.());
+        }
+      }
+
+      handleLog(
+        level: string,
+        scope: string,
+        message?: string,
+        info?: Map<string, any>,
+        error?: string
+      ): void {
+        // Only log in development for debugging
+        if (__DEV__) {
+          // Suppress verbose logging - only show warnings and errors
+          if (level === 'warn' || level === 'error') {
+            console.log(`[Superwall ${level}] ${scope}: ${message || ''}`);
+            if (error) {
+              console.log('[Superwall] Error:', error);
+            }
+          }
         }
       }
     }
+
+    return new AppSuperwallDelegate();
+  } catch (error) {
+    if (__DEV__) {
+      console.log('[Subscription] Failed to create delegate:', error);
+    }
+    return null;
   }
 }
 
 export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSuperwallAvailable, setIsSuperwallAvailable] = useState(false);
 
   // Handle subscription state changes
   const handleSubscriptionChange = useCallback((isActive: boolean) => {
@@ -181,29 +216,56 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
     const initialize = async () => {
       try {
-        await initializeSuperwall();
+        const initialized = await initializeSuperwall();
+        
+        if (!initialized || !mounted) {
+          if (__DEV__) {
+            console.log('[Subscription] Superwall not available - skipping delegate setup');
+          }
+          setIsLoading(false);
+          setIsSuperwallAvailable(false);
+          return;
+        }
+
+        setIsSuperwallAvailable(true);
 
         // Set up delegate for subscription events
-        const delegate = new AppSuperwallDelegate(
+        const delegate = createAppSuperwallDelegate(
           handleSubscriptionChange,
           handleTrialStarted,
           handleSubscriptionActivated
         );
-        Superwall.shared.setDelegate(delegate);
+
+        const shared = getSuperwallShared();
+        if (delegate && shared) {
+          shared.setDelegate(delegate);
+        }
 
         // Check initial subscription status
-        const status = await Superwall.shared.getSubscriptionStatus();
-        if (mounted) {
-          setIsSubscribed(status === 'ACTIVE');
-          setIsLoading(false);
-          if (__DEV__) {
-            console.log('[Subscription] Initial status:', status);
+        if (shared) {
+          try {
+            const status = await shared.getSubscriptionStatus();
+            if (mounted) {
+              setIsSubscribed(status === 'ACTIVE');
+              if (__DEV__) {
+                console.log('[Subscription] Initial status:', status);
+              }
+            }
+          } catch (statusError) {
+            if (__DEV__) {
+              console.log('[Subscription] Error getting status:', statusError);
+            }
           }
+        }
+
+        if (mounted) {
+          setIsLoading(false);
         }
       } catch (error) {
         console.error('[Subscription] Initialization error:', error);
         if (mounted) {
           setIsLoading(false);
+          setIsSuperwallAvailable(false);
         }
       }
     };
@@ -217,7 +279,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
   /**
    * Register a gated action
-   * If subscribed, executes the action immediately
+   * If subscribed or Superwall unavailable, executes the action immediately
    * If not subscribed, shows the paywall and executes action on success
    */
   const registerGatedAction = useCallback(
@@ -226,35 +288,47 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         console.log('[Subscription] Registering gated action...');
       }
 
+      // If Superwall is not available, just execute the action
+      // This allows the app to work even without paywalls configured
+      const shared = getSuperwallShared();
+      if (!shared || !isSuperwallAvailable || !getSuperwallTypes()) {
+        if (__DEV__) {
+          console.log('[Subscription] Superwall not available - executing action directly');
+        }
+        await onSuccess();
+        return;
+      }
+
       try {
         // Create a presentation handler to track paywall events
-        const handler = new PaywallPresentationHandler();
+        const handler = PaywallPresentationHandler ? new PaywallPresentationHandler() : null;
         
-        handler.onPresent((paywallInfo) => {
-          if (__DEV__) {
-            console.log('[Subscription] Paywall presented:', paywallInfo.name);
-          }
-          // Note: paywall_shown is tracked via delegate
-        });
+        if (handler) {
+          handler.onPresent?.((paywallInfo: any) => {
+            if (__DEV__) {
+              console.log('[Subscription] Paywall presented:', paywallInfo?.name);
+            }
+          });
 
-        handler.onDismiss((paywallInfo, result) => {
-          if (__DEV__) {
-            console.log('[Subscription] Paywall dismissed:', result);
-          }
-        });
+          handler.onDismiss?.((paywallInfo: any, result: any) => {
+            if (__DEV__) {
+              console.log('[Subscription] Paywall dismissed:', result);
+            }
+          });
 
-        handler.onError((error) => {
-          console.error('[Subscription] Paywall error:', error);
-        });
+          handler.onError?.((error: any) => {
+            console.error('[Subscription] Paywall error:', error);
+          });
 
-        handler.onSkip((skipReason) => {
-          if (__DEV__) {
-            console.log('[Subscription] Paywall skipped:', skipReason.description);
-          }
-        });
+          handler.onSkip?.((skipReason: any) => {
+            if (__DEV__) {
+              console.log('[Subscription] Paywall skipped:', skipReason?.description);
+            }
+          });
+        }
 
         // Register the placement with the feature callback
-        await Superwall.shared.register({
+        await shared.register({
           placement: PLACEMENTS.RECORD_GATE,
           handler,
           feature: async () => {
@@ -266,14 +340,17 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         });
       } catch (error) {
         console.error('[Subscription] Error in registerGatedAction:', error);
+        // On error, still try to execute the action to not block users
+        await onSuccess();
       }
     },
-    []
+    [isSuperwallAvailable]
   );
 
   const value: SubscriptionContextType = {
     isSubscribed,
     isLoading,
+    isSuperwallAvailable,
     registerGatedAction,
   };
 

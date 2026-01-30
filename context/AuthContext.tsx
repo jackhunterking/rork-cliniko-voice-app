@@ -155,7 +155,24 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     }
   }, [handleSessionEstablished]);
 
-  // Initialize auth state and handle deep links
+  // Handle deep links when app is ALREADY OPEN (not cold start)
+  // This effect MUST be set up FIRST so we don't miss any incoming URLs
+  useEffect(() => {
+    const handleUrl = (event: { url: string }) => {
+      logAuth('Deep link received (app already open):', event.url.substring(0, 100));
+      createSessionFromUrl(event.url);
+    };
+
+    // Listen for incoming links while app is running
+    const subscription = Linking.addEventListener('url', handleUrl);
+    logAuth('URL listener registered');
+
+    return () => {
+      subscription.remove();
+    };
+  }, [createSessionFromUrl]);
+
+  // Initialize auth state and handle initial deep links (cold start)
   useEffect(() => {
     let mounted = true;
 
@@ -164,11 +181,30 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       try {
         // FIRST: Check for deep link URL with auth tokens
         // This must happen BEFORE we check session state
-        const initialUrl = await Linking.getInitialURL();
+        // Try multiple times as there can be timing issues
+        let initialUrl: string | null = null;
+        
+        // Attempt to get initial URL - may need retry for timing issues
+        for (let attempt = 0; attempt < 3; attempt++) {
+          initialUrl = await Linking.getInitialURL();
+          if (initialUrl) {
+            break;
+          }
+          // Short delay before retry
+          if (attempt < 2) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        }
+        
         logAuth('Initial URL:', initialUrl ? initialUrl.substring(0, 100) + '...' : 'none');
         
         if (initialUrl) {
-          const { params } = QueryParams.getQueryParams(initialUrl);
+          const { params, errorCode } = QueryParams.getQueryParams(initialUrl);
+          
+          if (errorCode) {
+            errorAuth('Error code in initial URL:', errorCode);
+          }
+          
           if (params.access_token && params.refresh_token) {
             logAuth('Found auth tokens in initial URL, setting session...');
             const { data, error } = await supabase.auth.setSession({
@@ -264,23 +300,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [validateClinikoCredentialOwnership]);
-
-  // Handle deep links when app is ALREADY OPEN (not cold start)
-  // Cold start deep links are handled in initializeAuth above
-  useEffect(() => {
-    const handleUrl = (event: { url: string }) => {
-      logAuth('Deep link received (app already open):', event.url.substring(0, 100));
-      createSessionFromUrl(event.url);
-    };
-
-    // Listen for incoming links while app is running
-    const subscription = Linking.addEventListener('url', handleUrl);
-
-    return () => {
-      subscription.remove();
-    };
-  }, [createSessionFromUrl]);
+  }, [validateClinikoCredentialOwnership, handleSessionEstablished]);
 
   // Send magic link to email
   const sendMagicLink = useCallback(

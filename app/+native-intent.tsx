@@ -18,6 +18,14 @@ export function redirectSystemPath({
   // Log for debugging on real device
   console.log('[NativeIntent] Received path:', path, 'initial:', initial);
   
+  // Check if this is a magic link URL (contains hash fragment with tokens)
+  // The path will be the full URL for magic links
+  const hasAuthTokens = path.includes('#access_token=') || path.includes('access_token=');
+  
+  if (hasAuthTokens) {
+    console.log('[NativeIntent] Magic link detected - will be processed by AuthContext');
+  }
+  
   // Always route to index - let AuthContext and AuthGuard handle navigation
   // based on the actual auth state after processing any tokens from the URL
   return '/';

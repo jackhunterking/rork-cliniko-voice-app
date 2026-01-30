@@ -11,12 +11,20 @@ import { logRouter } from "@/lib/debug";
 import { initializePostHog } from "@/lib/posthog";
 import { initializeFacebook } from "@/lib/facebook";
 
+// Initialize Facebook SDK asynchronously (won't block app startup)
+// This is done outside the component to avoid re-initialization on re-renders
+initializeFacebook().catch(() => {
+  // Silent fail - Facebook SDK initialization errors are non-fatal
+});
+
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
-// Initialize analytics SDKs early
+// Initialize analytics SDKs early (PostHog only - Facebook is initialized asynchronously)
 initializePostHog();
-initializeFacebook();
+
+// Note: Facebook SDK is initialized asynchronously inside the component
+// to prevent native module errors from crashing the app
 
 const queryClient = new QueryClient();
 
