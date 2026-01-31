@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import { X, Mic, MicOff, Check, Square } from 'lucide-react-native';
+import { X, Mic, MicOff, Check, Square, Cloud } from 'lucide-react-native';
 import { colors, spacing, radius } from '@/constants/colors';
 import { WaveformBars } from './WaveformBars';
 import { RecordingState } from '@/types/streaming';
@@ -333,6 +333,12 @@ export function FullScreenRecordingSheet({
               )}
             </Pressable>
           </Animated.View>
+
+          {/* AI Badge */}
+          <View style={styles.aiBadge}>
+            <Cloud size={12} color={colors.primary} />
+            <Text style={styles.aiBadgeText}>Powered by Clinical AI</Text>
+          </View>
         </View>
 
         {/* Action Buttons */}
@@ -543,6 +549,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  aiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(0, 178, 169, 0.08)',
+    borderRadius: 20,
+    gap: 6,
+  },
+  aiBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.primary,
+    letterSpacing: 0.2,
   },
   actionsContainer: {
     flexDirection: 'row',

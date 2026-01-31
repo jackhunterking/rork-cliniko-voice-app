@@ -2,82 +2,38 @@
  * Superwall Configuration
  * Handles paywall presentation and subscription management
  * 
- * NOTE: Uses lazy loading to prevent crashes if native module isn't linked.
- * If you see "package doesn't seem to be linked" error, rebuild the app:
- * 1. cd ios && pod install
- * 2. Run: npx expo run:ios (or build from Xcode)
+ * Using @superwall/react-native-superwall SDK v2.x (wraps native SDK v4)
+ * for entitlements-based subscription filtering support
  */
 
-import { Platform, NativeModules } from 'react-native';
+import { Platform } from 'react-native';
 
 // Lazy-loaded Superwall reference
-let SuperwallInstance: any = null;
+let SuperwallModule: typeof import('@superwall/react-native-superwall') | null = null;
 let isSuperwallAvailable = false;
 let initializationAttempted = false;
-let moduleCheckDone = false;
 
 // Superwall API key from environment variable
 const SUPERWALL_API_KEY = process.env.EXPO_PUBLIC_SUPERWALL_API_KEY ?? '';
 
 /**
- * Check if Superwall native module is available before requiring
- * This prevents the error from being thrown in the first place
- */
-function isNativeModuleLinked(): boolean {
-  if (moduleCheckDone) {
-    return isSuperwallAvailable;
-  }
-  
-  try {
-    // Check if the native module exists in NativeModules
-    // The Superwall module registers as 'Superwall' or 'SuperwallBridge'
-    const hasNativeModule = !!(
-      NativeModules.Superwall || 
-      NativeModules.SuperwallBridge || 
-      NativeModules.RNSuperwall
-    );
-    
-    if (!hasNativeModule) {
-      moduleCheckDone = true;
-      if (__DEV__) {
-        console.log('[Superwall] Native module not found - paywall features disabled. Rebuild app to enable.');
-      }
-      return false;
-    }
-    return true;
-  } catch {
-    moduleCheckDone = true;
-    return false;
-  }
-}
-
-/**
  * Safely get the Superwall module
  * Returns null if not available
  */
-function getSuperwallModule(): any {
-  if (SuperwallInstance !== null) {
-    return SuperwallInstance;
-  }
-  
-  // Check native module availability first to avoid noisy errors
-  if (!isNativeModuleLinked()) {
-    return null;
+function getSuperwallModule(): typeof import('@superwall/react-native-superwall') | null {
+  if (SuperwallModule !== null) {
+    return SuperwallModule;
   }
 
   try {
-    // Dynamic require to catch native module errors
-    const superwallModule = require('@superwall/react-native-superwall');
-    SuperwallInstance = superwallModule.default || superwallModule.Superwall;
+    // Dynamic require to catch module errors
+    SuperwallModule = require('@superwall/react-native-superwall');
     isSuperwallAvailable = true;
-    moduleCheckDone = true;
-    return SuperwallInstance;
+    return SuperwallModule;
   } catch (error: any) {
-    moduleCheckDone = true;
     isSuperwallAvailable = false;
     if (__DEV__) {
-      // Only log a simple message, not the full error (which is noisy)
-      console.log('[Superwall] Module not linked - rebuild app to enable paywalls');
+      console.log('[Superwall] Module not available - rebuild app to enable paywalls');
     }
     return null;
   }
@@ -100,16 +56,18 @@ export async function initializeSuperwall(): Promise<boolean> {
     return false;
   }
 
-  const Superwall = getSuperwallModule();
-  if (!Superwall) {
+  const module = getSuperwallModule();
+  if (!module) {
     console.warn('[Superwall] Native module not available. Paywalls will not work.');
     return false;
   }
 
   try {
-    await Superwall.configure(SUPERWALL_API_KEY);
+    // Configure Superwall with the API key (v2 API)
+    await module.Superwall.configure(SUPERWALL_API_KEY);
+    
     if (__DEV__) {
-      console.log('[Superwall] Initialized successfully');
+      console.log('[Superwall] Initialized successfully with SDK v2 (native v4)');
     }
     return true;
   } catch (error) {
@@ -143,16 +101,16 @@ export function isSuperwallReady(): boolean {
 }
 
 /**
- * Get the Superwall shared instance (lazy loaded)
+ * Get the Superwall shared instance
  * Returns null if not available
  */
-export function getSuperwallShared(): any {
-  const Superwall = getSuperwallModule();
-  return Superwall?.shared || null;
+export function getSuperwallShared() {
+  const module = getSuperwallModule();
+  return module?.Superwall?.shared || null;
 }
 
 /**
- * Check if user has an active subscription
+ * Check if user has an active subscription via entitlements
  * Returns false if Superwall is not available
  */
 export async function isSubscriptionActive(): Promise<boolean> {
@@ -163,6 +121,7 @@ export async function isSubscriptionActive(): Promise<boolean> {
 
   try {
     const status = await shared.getSubscriptionStatus();
+    // SDK v4 uses entitlements - ACTIVE means user has entitlements
     return status === 'ACTIVE';
   } catch (error) {
     console.error('[Superwall] Error checking subscription status:', error);
@@ -171,15 +130,14 @@ export async function isSubscriptionActive(): Promise<boolean> {
 }
 
 // Export a lazy getter for the Superwall instance
-// This allows code to check if it's available before using
 export const Superwall = {
   get shared() {
     return getSuperwallShared();
   },
   configure: async (apiKey: string) => {
-    const sw = getSuperwallModule();
-    if (sw) {
-      return sw.configure(apiKey);
+    const module = getSuperwallModule();
+    if (module) {
+      return module.Superwall.configure(apiKey);
     }
     throw new Error('Superwall native module not available');
   },

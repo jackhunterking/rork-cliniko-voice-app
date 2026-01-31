@@ -18,6 +18,7 @@ module.exports = {
       bundleIdentifier: "app.cliniko-voice",
       infoPlist: {
         NSMicrophoneUsageDescription: "Cliniko Voice needs access to your microphone to transcribe your clinical notes in real-time.",
+        NSUserTrackingUsageDescription: "This allows us to measure the effectiveness of our advertising and provide you with a better experience.",
         UIBackgroundModes: ["audio"],
         SKAdNetworkItems: [
           { SKAdNetworkIdentifier: "v9wttpbfk9.skadnetwork" },
