@@ -2,16 +2,54 @@
  * Superwall Configuration
  * Handles paywall presentation and subscription management
  * 
- * NOTE: Uses lazy loading to prevent crashes if native module isn't linked
+ * NOTE: Uses lazy loading to prevent crashes if native module isn't linked.
+ * If you see "package doesn't seem to be linked" error, rebuild the app:
+ * 1. cd ios && pod install
+ * 2. Run: npx expo run:ios (or build from Xcode)
  */
+
+import { Platform, NativeModules } from 'react-native';
 
 // Lazy-loaded Superwall reference
 let SuperwallInstance: any = null;
 let isSuperwallAvailable = false;
 let initializationAttempted = false;
+let moduleCheckDone = false;
 
 // Superwall API key from environment variable
 const SUPERWALL_API_KEY = process.env.EXPO_PUBLIC_SUPERWALL_API_KEY ?? '';
+
+/**
+ * Check if Superwall native module is available before requiring
+ * This prevents the error from being thrown in the first place
+ */
+function isNativeModuleLinked(): boolean {
+  if (moduleCheckDone) {
+    return isSuperwallAvailable;
+  }
+  
+  try {
+    // Check if the native module exists in NativeModules
+    // The Superwall module registers as 'Superwall' or 'SuperwallBridge'
+    const hasNativeModule = !!(
+      NativeModules.Superwall || 
+      NativeModules.SuperwallBridge || 
+      NativeModules.RNSuperwall
+    );
+    
+    if (!hasNativeModule) {
+      moduleCheckDone = true;
+      if (__DEV__) {
+        console.log('[Superwall] Native module not found - paywall features disabled. Rebuild app to enable.');
+      }
+      return false;
+    }
+    return true;
+  } catch {
+    moduleCheckDone = true;
+    return false;
+  }
+}
 
 /**
  * Safely get the Superwall module
@@ -21,16 +59,25 @@ function getSuperwallModule(): any {
   if (SuperwallInstance !== null) {
     return SuperwallInstance;
   }
+  
+  // Check native module availability first to avoid noisy errors
+  if (!isNativeModuleLinked()) {
+    return null;
+  }
 
   try {
     // Dynamic require to catch native module errors
     const superwallModule = require('@superwall/react-native-superwall');
     SuperwallInstance = superwallModule.default || superwallModule.Superwall;
     isSuperwallAvailable = true;
+    moduleCheckDone = true;
     return SuperwallInstance;
-  } catch (error) {
+  } catch (error: any) {
+    moduleCheckDone = true;
+    isSuperwallAvailable = false;
     if (__DEV__) {
-      console.log('[Superwall] SDK not available - native module may not be linked:', error);
+      // Only log a simple message, not the full error (which is noisy)
+      console.log('[Superwall] Module not linked - rebuild app to enable paywalls');
     }
     return null;
   }

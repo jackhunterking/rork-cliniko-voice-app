@@ -51,12 +51,18 @@ module.exports = {
       "expo-web-browser",
       "expo-secure-store",
       [
+        "expo-tracking-transparency",
+        {
+          userTrackingPermission: "This allows us to measure the effectiveness of our advertising and provide you with a better experience."
+        }
+      ],
+      [
         "react-native-fbsdk-next",
         {
           appID: process.env.EXPO_PUBLIC_FACEBOOK_APP_ID,
           clientToken: process.env.EXPO_PUBLIC_FACEBOOK_CLIENT_TOKEN,
           displayName: "Cliniko Voice App",
-          advertiserIDCollectionEnabled: false,
+          advertiserIDCollectionEnabled: true,
           autoLogAppEventsEnabled: true,
           isAutoInitEnabled: true
         }

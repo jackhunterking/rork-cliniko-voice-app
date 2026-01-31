@@ -6,6 +6,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { NativeModules } from 'react-native';
 import { initializeSuperwall, PLACEMENTS, isSuperwallReady, getSuperwallShared } from '@/lib/superwall';
 import { trackEvent, ANALYTICS_EVENTS } from '@/lib/posthog';
 import { fbEvents } from '@/lib/facebook';
@@ -13,18 +14,42 @@ import { fbEvents } from '@/lib/facebook';
 // Lazy-loaded Superwall types - we'll check if they're available at runtime
 let SuperwallDelegate: any = null;
 let PaywallPresentationHandler: any = null;
+let typesCheckDone = false;
+
+/**
+ * Check if native module is linked before trying to require
+ */
+function isNativeModuleAvailable(): boolean {
+  return !!(
+    NativeModules.Superwall || 
+    NativeModules.SuperwallBridge || 
+    NativeModules.RNSuperwall
+  );
+}
 
 function getSuperwallTypes(): boolean {
   if (SuperwallDelegate && PaywallPresentationHandler) {
     return true;
   }
   
+  if (typesCheckDone) {
+    return false;
+  }
+  
+  // Check native module first to avoid noisy errors
+  if (!isNativeModuleAvailable()) {
+    typesCheckDone = true;
+    return false;
+  }
+  
   try {
     const superwallModule = require('@superwall/react-native-superwall');
     SuperwallDelegate = superwallModule.SuperwallDelegate;
     PaywallPresentationHandler = superwallModule.PaywallPresentationHandler;
+    typesCheckDone = true;
     return true;
   } catch (error) {
+    typesCheckDone = true;
     if (__DEV__) {
       console.log('[Subscription] Superwall types not available');
     }
