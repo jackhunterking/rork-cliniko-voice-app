@@ -10,9 +10,17 @@ import {
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronRight, Mail, Key, Shield, FileText, X } from 'lucide-react-native';
+import { ChevronRight, Mail, Key, Shield, FileText, X, ExternalLink } from 'lucide-react-native';
 import { colors, spacing, radius } from '@/constants/colors';
 import { BottomSheet } from '@/components/BottomSheet';
+
+// Centralized URLs for consistency
+const URLS = {
+  SUPPORT_EMAIL: 'hello@clinikovoice.com',
+  CLINIKO_API_KEY_HELP: 'https://help.cliniko.com/en/articles/1023957-generate-a-cliniko-api-key',
+  PRIVACY_POLICY: 'https://clinikovoice.com/privacy',
+  TERMS_OF_SERVICE: 'https://clinikovoice.com/terms',
+};
 
 export default function HelpScreen() {
   const insets = useSafeAreaInsets();
@@ -24,7 +32,7 @@ export default function HelpScreen() {
   };
 
   const handleEmailPress = () => {
-    Linking.openURL('mailto:support@clinikovoice.com');
+    Linking.openURL(`mailto:${URLS.SUPPORT_EMAIL}`);
     setShowContactModal(false);
   };
 
@@ -32,12 +40,17 @@ export default function HelpScreen() {
     setShowApiKeySheet(true);
   };
 
+  const handleOpenClinikoHelp = () => {
+    Linking.openURL(URLS.CLINIKO_API_KEY_HELP);
+    setShowApiKeySheet(false);
+  };
+
   const handlePrivacyPolicy = () => {
-    console.log('Open privacy policy');
+    Linking.openURL(URLS.PRIVACY_POLICY);
   };
 
   const handleTermsOfService = () => {
-    console.log('Open terms of service');
+    Linking.openURL(URLS.TERMS_OF_SERVICE);
   };
 
   return (
@@ -101,7 +114,7 @@ export default function HelpScreen() {
               </View>
               <Text style={styles.rowTitle}>Privacy policy</Text>
             </View>
-            <ChevronRight size={20} color={colors.textSecondary} />
+            <ExternalLink size={18} color={colors.textSecondary} />
           </TouchableOpacity>
 
           <View style={styles.separator} />
@@ -117,7 +130,7 @@ export default function HelpScreen() {
               </View>
               <Text style={styles.rowTitle}>Terms of service</Text>
             </View>
-            <ChevronRight size={20} color={colors.textSecondary} />
+            <ExternalLink size={18} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -152,7 +165,7 @@ export default function HelpScreen() {
               onPress={handleEmailPress}
               activeOpacity={0.8}
             >
-              <Text style={styles.emailButtonText}>support@clinikovoice.com</Text>
+              <Text style={styles.emailButtonText}>{URLS.SUPPORT_EMAIL}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -161,7 +174,7 @@ export default function HelpScreen() {
       <BottomSheet
         visible={showApiKeySheet}
         onClose={() => setShowApiKeySheet(false)}
-        maxHeight={380}
+        maxHeight={440}
       >
         <View style={styles.sheetContent}>
           <Text style={styles.sheetTitle}>Finding your Cliniko API key</Text>
@@ -199,6 +212,15 @@ export default function HelpScreen() {
               </Text>
             </View>
           </View>
+
+          <TouchableOpacity
+            style={styles.helpLinkButton}
+            onPress={handleOpenClinikoHelp}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.helpLinkText}>View Cliniko's guide</Text>
+            <ExternalLink size={14} color={colors.primary} />
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.sheetButton}
@@ -356,12 +378,24 @@ const styles = StyleSheet.create({
   stepBold: {
     fontWeight: '600' as const,
   },
+  helpLinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    gap: 6,
+  },
+  helpLinkText: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '500' as const,
+  },
   sheetButton: {
     backgroundColor: colors.primary,
     borderRadius: radius.md,
     paddingVertical: 14,
     alignItems: 'center',
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   sheetButtonText: {
     fontSize: 17,

@@ -197,7 +197,7 @@ export default function TermsPage() {
                 If you have any questions about these Terms of Service, please contact us at:
               </p>
               <p className="text-slate-600 mt-4">
-                <strong>Email:</strong> legal@clinikovoice.com
+                <strong>Email:</strong> hello@clinikovoice.com
               </p>
             </section>
           </div>

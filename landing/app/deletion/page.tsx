@@ -73,10 +73,10 @@ export default function DeletionPage() {
               <div className="bg-slate-100 rounded-xl p-6 mb-4">
                 <p className="text-slate-700 font-medium mb-2">Send an email to:</p>
                 <a 
-                  href="mailto:privacy@clinikovoice.com?subject=Data%20Deletion%20Request" 
+                  href="mailto:hello@clinikovoice.com?subject=Data%20Deletion%20Request" 
                   className="text-cyan-600 hover:text-cyan-700 font-semibold text-lg"
                 >
-                  privacy@clinikovoice.com
+                  hello@clinikovoice.com
                 </a>
               </div>
               <p className="text-slate-600 leading-relaxed mb-4">
@@ -148,8 +148,8 @@ export default function DeletionPage() {
               </p>
               <p className="text-slate-600 mt-4">
                 <strong>Email:</strong>{' '}
-                <a href="mailto:privacy@clinikovoice.com" className="text-cyan-600 hover:text-cyan-700">
-                  privacy@clinikovoice.com
+                <a href="mailto:hello@clinikovoice.com" className="text-cyan-600 hover:text-cyan-700">
+                  hello@clinikovoice.com
                 </a>
               </p>
             </section>

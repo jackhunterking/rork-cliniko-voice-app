@@ -7,48 +7,63 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
-  ActionSheetIOS,
   Platform,
-  Modal,
   KeyboardAvoidingView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ImagePlus, X } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, radius } from '@/constants/colors';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 type Priority = 'low' | 'medium' | 'high';
 
 export default function FeatureRequestScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useAuth();
   const [screenshot, setScreenshot] = useState<string | null>(null);
   const [requestDetails, setRequestDetails] = useState('');
   const [priority, setPriority] = useState<Priority>('medium');
-  const [showActionSheet, setShowActionSheet] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleAddScreenshot = () => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Cancel', 'Take photo', 'Choose from library'],
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1 || buttonIndex === 2) {
-            setScreenshot('https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=300&fit=crop');
-          }
-        }
+  const handleAddScreenshot = async () => {
+    try {
+      // Request permission
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (!permissionResult.granted) {
+        Alert.alert(
+          'Permission Required',
+          'Please allow access to your photo library to add a screenshot.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Launch image picker (library only, no camera)
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setScreenshot(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert(
+        'Error',
+        'Failed to select image. Please try again.',
+        [{ text: 'OK' }]
       );
-    } else {
-      setShowActionSheet(true);
-    }
-  };
-
-  const handleActionSheetOption = (option: 'photo' | 'library' | 'cancel') => {
-    setShowActionSheet(false);
-    if (option !== 'cancel') {
-      setScreenshot('https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=300&fit=crop');
     }
   };
 
@@ -56,9 +71,95 @@ export default function FeatureRequestScreen() {
     setScreenshot(null);
   };
 
-  const handleSubmit = () => {
-    console.log('Submitting feature request:', { screenshot, requestDetails, priority });
-    router.push('/settings/feature-request/success' as any);
+  const uploadScreenshot = async (uri: string): Promise<string | null> => {
+    try {
+      // Convert URI to blob for upload
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      
+      // Generate unique filename
+      const filename = `feature-requests/${user?.id}/${Date.now()}.jpg`;
+      
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('screenshots')
+        .upload(filename, blob, {
+          contentType: 'image/jpeg',
+          upsert: false,
+        });
+
+      if (error) {
+        console.error('Screenshot upload error:', error);
+        // Continue without screenshot if upload fails
+        return null;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('screenshots')
+        .getPublicUrl(data.path);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Failed to upload screenshot:', error);
+      return null;
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!requestDetails.trim()) {
+      Alert.alert(
+        'Missing Details',
+        'Please describe the feature you would like to request.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      let screenshotUrl: string | null = null;
+
+      // Upload screenshot if provided
+      if (screenshot) {
+        screenshotUrl = await uploadScreenshot(screenshot);
+      }
+
+      // Insert feature request into Supabase
+      const { error } = await supabase
+        .from('feature_requests')
+        .insert({
+          user_id: user?.id || null,
+          user_email: user?.email || null,
+          request_details: requestDetails.trim(),
+          priority: priority,
+          screenshot_url: screenshotUrl,
+          status: 'new',
+        });
+
+      if (error) {
+        console.error('Feature request submission error:', error);
+        Alert.alert(
+          'Error',
+          'Failed to submit your feature request. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      console.log('Feature request submitted successfully');
+      router.push('/settings/feature-request/success' as any);
+    } catch (error) {
+      console.error('Failed to submit feature request:', error);
+      Alert.alert(
+        'Error',
+        'Something went wrong. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const priorities: { key: Priority; label: string }[] = [
@@ -116,7 +217,7 @@ export default function FeatureRequestScreen() {
                   <View style={styles.iconCircle}>
                     <ImagePlus size={24} color={colors.textSecondary} />
                   </View>
-                  <Text style={styles.imagePlaceholderText}>Add a screenshot</Text>
+                  <Text style={styles.imagePlaceholderText}>Upload an image</Text>
                   <Text style={styles.imagePlaceholderSubtext}>Optional</Text>
                 </View>
               </TouchableOpacity>
@@ -134,6 +235,7 @@ export default function FeatureRequestScreen() {
                 placeholderTextColor={colors.textSecondary}
                 multiline
                 textAlignVertical="top"
+                editable={!isSubmitting}
               />
             </View>
           </View>
@@ -152,6 +254,7 @@ export default function FeatureRequestScreen() {
                   ]}
                   onPress={() => setPriority(p.key)}
                   activeOpacity={0.7}
+                  disabled={isSubmitting}
                 >
                   <Text
                     style={[
@@ -173,50 +276,22 @@ export default function FeatureRequestScreen() {
 
         <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
           <TouchableOpacity
-            style={styles.submitButton}
+            style={[
+              styles.submitButton,
+              isSubmitting && styles.submitButtonDisabled,
+            ]}
             onPress={handleSubmit}
             activeOpacity={0.8}
+            disabled={isSubmitting}
           >
-            <Text style={styles.submitButtonText}>Send request</Text>
+            {isSubmitting ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.submitButtonText}>Send request</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-
-      <Modal
-        visible={showActionSheet}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowActionSheet(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowActionSheet(false)}
-        >
-          <View style={styles.actionSheet}>
-            <TouchableOpacity
-              style={styles.actionSheetOption}
-              onPress={() => handleActionSheetOption('photo')}
-            >
-              <Text style={styles.actionSheetOptionText}>Take photo</Text>
-            </TouchableOpacity>
-            <View style={styles.actionSheetSeparator} />
-            <TouchableOpacity
-              style={styles.actionSheetOption}
-              onPress={() => handleActionSheetOption('library')}
-            >
-              <Text style={styles.actionSheetOptionText}>Choose from library</Text>
-            </TouchableOpacity>
-            <View style={styles.actionSheetSeparator} />
-            <TouchableOpacity
-              style={styles.actionSheetOption}
-              onPress={() => handleActionSheetOption('cancel')}
-            >
-              <Text style={styles.actionSheetCancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 }
@@ -371,37 +446,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
   submitButtonText: {
     fontSize: 17,
     fontWeight: '600' as const,
     color: '#FFFFFF',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: 'flex-end',
-  },
-  actionSheet: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    paddingBottom: spacing.xl,
-  },
-  actionSheetOption: {
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  actionSheetOptionText: {
-    fontSize: 17,
-    color: colors.primary,
-  },
-  actionSheetCancelText: {
-    fontSize: 17,
-    fontWeight: '600' as const,
-    color: colors.textPrimary,
-  },
-  actionSheetSeparator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
   },
 });

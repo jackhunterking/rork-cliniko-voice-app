@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AlertTriangle, Square, CheckSquare } from 'lucide-react-native';
+import { AlertTriangle, Square, CheckSquare, ChevronLeft } from 'lucide-react-native';
 import { colors, spacing, radius } from '@/constants/colors';
 
 export default function DeleteDataScreen() {
@@ -28,6 +28,14 @@ export default function DeleteDataScreen() {
     router.push('/settings/delete-data/success' as any);
   };
 
+  const handleGoBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/profile');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Stack.Screen
@@ -35,6 +43,20 @@ export default function DeleteDataScreen() {
           title: 'Delete my data',
           headerShadowVisible: false,
           headerStyle: { backgroundColor: colors.background },
+          headerBackVisible: true,
+          headerBackTitle: 'Back',
+          headerLeft: () => (
+            <TouchableOpacity 
+              onPress={handleGoBack}
+              style={{ marginLeft: -8, padding: 8 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <ChevronLeft size={28} color={colors.primary} />
+                <Text style={{ color: colors.primary, fontSize: 17 }}>Back</Text>
+              </View>
+            </TouchableOpacity>
+          ),
         }}
       />
 

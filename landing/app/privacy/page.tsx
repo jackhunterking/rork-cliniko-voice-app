@@ -169,7 +169,7 @@ export default function PrivacyPage() {
                 If you have any questions about this Privacy Policy, please contact us at:
               </p>
               <p className="text-slate-600 mt-4">
-                <strong>Email:</strong> privacy@clinikovoice.com
+                <strong>Email:</strong> hello@clinikovoice.com
               </p>
             </section>
           </div>
