@@ -2,12 +2,12 @@
  * Subscription Context
  * Manages subscription state via Superwall and provides gating functionality
  * 
- * Using @superwall/react-native-superwall SDK v2 (wraps native SDK v4)
- * with entitlements-based subscription filtering support
+ * Uses expo-superwall SDK hooks for Expo SDK 53+
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { initializeSuperwall, PLACEMENTS, isSuperwallReady, getSuperwallShared } from '@/lib/superwall';
+import React, { createContext, useContext, useCallback, ReactNode } from 'react';
+import { usePlacement, useUser, useSuperwall } from 'expo-superwall';
+import { PLACEMENTS } from '@/lib/superwall';
 import { trackEvent, ANALYTICS_EVENTS } from '@/lib/posthog';
 import { fbEvents } from '@/lib/facebook';
 
@@ -16,9 +16,9 @@ interface SubscriptionContextType {
   isSubscribed: boolean;
   /** Whether subscription status is still being determined */
   isLoading: boolean;
-  /** Whether Superwall is available */
+  /** Whether Superwall is available and configured */
   isSuperwallAvailable: boolean;
-  /** Register a gated action - shows paywall if not subscribed */
+  /** Register a gated action - shows paywall if not subscribed (for gated paywalls) */
   registerGatedAction: (onSuccess: () => void | Promise<void>) => Promise<void>;
 }
 
@@ -29,130 +29,111 @@ interface SubscriptionProviderProps {
 }
 
 export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSuperwallAvailable, setIsSuperwallAvailable] = useState(false);
-
-  // Initialize Superwall on mount
-  useEffect(() => {
-    let mounted = true;
-
-    const initialize = async () => {
-      try {
-        const initialized = await initializeSuperwall();
-        
-        if (!initialized || !mounted) {
-          if (__DEV__) {
-            console.log('[Subscription] Superwall not available - skipping setup');
-          }
-          setIsLoading(false);
-          setIsSuperwallAvailable(false);
-          return;
-        }
-
-        setIsSuperwallAvailable(true);
-
-        const Superwall = getSuperwallShared();
-        
-        // Check initial subscription status
-        if (Superwall) {
-          try {
-            const status = await Superwall.getSubscriptionStatus();
-            if (mounted) {
-              const isActive = status?.status === 'ACTIVE';
-              setIsSubscribed(isActive);
-              if (__DEV__) {
-                console.log('[Subscription] Initial status:', status?.status, '| isActive:', isActive);
-              }
-            }
-          } catch (statusError) {
-            if (__DEV__) {
-              console.log('[Subscription] Error getting status:', statusError);
-            }
-          }
-        }
-
-        if (mounted) {
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('[Subscription] Initialization error:', error);
-        if (mounted) {
-          setIsLoading(false);
-          setIsSuperwallAvailable(false);
-        }
+  // Get Superwall configuration state
+  const isConfigured = useSuperwall((state) => state.isConfigured);
+  const isLoading = useSuperwall((state) => state.isLoading);
+  const configError = useSuperwall((state) => state.configurationError);
+  
+  // Get user subscription status
+  const { subscriptionStatus } = useUser();
+  
+  // Get placement hook for triggering paywalls
+  const { registerPlacement } = usePlacement({
+    onError: (err) => {
+      if (__DEV__) {
+        console.log('[Subscription] Placement error:', err);
       }
-    };
+    },
+    onPresent: (info) => {
+      if (__DEV__) {
+        console.log('[Subscription] Paywall presented:', info);
+      }
+      trackEvent(ANALYTICS_EVENTS.PAYWALL_SHOWN);
+    },
+    onDismiss: (info, result) => {
+      if (__DEV__) {
+        console.log('[Subscription] Paywall dismissed:', info, 'Result:', result);
+      }
+    },
+  });
 
-    initialize();
+  // Determine if user is subscribed
+  const isSubscribed = subscriptionStatus?.status === 'ACTIVE';
+  const isSuperwallAvailable = isConfigured && !configError;
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  if (__DEV__ && !isLoading) {
+    console.log('[Subscription] Status:', {
+      isConfigured,
+      configError,
+      subscriptionStatus: subscriptionStatus?.status,
+      isSubscribed,
+    });
+  }
 
   /**
-   * Register a gated action
-   * If subscribed or Superwall unavailable, executes the action immediately
-   * If not subscribed, shows the paywall and executes action on subscription/feature access
+   * Register a gated action using Superwall
+   * 
+   * Per Superwall docs:
+   * - For GATED paywalls: feature callback only runs if user is subscribed or subscribes
+   * - For NON-GATED paywalls: feature callback runs after paywall dismisses
+   * - If no paywall configured: feature callback runs immediately
+   * - If Superwall not available: feature callback runs immediately (graceful fallback)
    */
   const registerGatedAction = useCallback(
     async (onSuccess: () => void | Promise<void>) => {
       if (__DEV__) {
-        console.log('[Subscription] Registering gated action for placement:', PLACEMENTS.RECORD_GATE);
+        console.log('[Subscription] registerGatedAction called for placement:', PLACEMENTS.RECORD_GATE);
+        console.log('[Subscription] isSuperwallAvailable:', isSuperwallAvailable);
       }
-
-      const Superwall = getSuperwallShared();
       
-      // If Superwall is not available, just execute the action
-      // This allows the app to work even without paywalls configured
-      if (!Superwall || !isSuperwallAvailable) {
+      // If Superwall is not available, execute the action directly
+      // This is a graceful fallback - app works even without paywalls
+      if (!isSuperwallAvailable) {
         if (__DEV__) {
-          console.log('[Subscription] Superwall not available - executing action directly');
+          console.log('[Subscription] Superwall not available - executing action directly (graceful fallback)');
         }
         await onSuccess();
         return;
       }
 
       try {
-        // Track that paywall might be shown
-        trackEvent(ANALYTICS_EVENTS.PAYWALL_SHOWN);
+        if (__DEV__) {
+          console.log('[Subscription] Calling registerPlacement() with placement:', PLACEMENTS.RECORD_GATE);
+        }
 
-        // Register the placement with the feature callback
-        // SDK v4 uses register() which shows paywall if not subscribed
-        // and calls the feature block based on gating mode
-        await Superwall.register({
+        // Use expo-superwall's registerPlacement
+        // The feature callback behavior depends on the dashboard "Feature Gating" setting:
+        // - Gated: callback only runs if user has access (subscribed or subscribes)
+        // - Non-Gated: callback runs when paywall dismisses
+        await registerPlacement({
           placement: PLACEMENTS.RECORD_GATE,
           feature: async () => {
             if (__DEV__) {
-              console.log('[Subscription] Feature callback - user has access');
+              console.log('[Subscription] Feature callback executed - user has access!');
             }
             
-            // Update subscription state
-            try {
-              const status = await Superwall.getSubscriptionStatus();
-              const isActive = status?.status === 'ACTIVE';
-              setIsSubscribed(isActive);
-              
-              if (isActive) {
-                // Track subscription analytics
-                trackEvent(ANALYTICS_EVENTS.SUBSCRIPTION_ACTIVE);
-                fbEvents.subscribe();
-              }
-            } catch (e) {
-              // Ignore status check errors
+            // Track subscription if user just subscribed
+            if (subscriptionStatus?.status === 'ACTIVE') {
+              trackEvent(ANALYTICS_EVENTS.SUBSCRIPTION_ACTIVE);
+              fbEvents.subscribe();
             }
             
+            // Execute the gated action
             await onSuccess();
           },
         });
+        
+        if (__DEV__) {
+          console.log('[Subscription] registerPlacement() completed');
+        }
       } catch (error) {
         console.error('[Subscription] Error in registerGatedAction:', error);
-        // On error, still try to execute the action to not block users
+        // On error, execute the action anyway to not block users
+        // This is a safety fallback
         await onSuccess();
       }
     },
-    [isSuperwallAvailable]
+    [isSuperwallAvailable, registerPlacement, subscriptionStatus]
   );
 
   const value: SubscriptionContextType = {

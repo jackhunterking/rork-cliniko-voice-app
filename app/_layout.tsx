@@ -1,8 +1,25 @@
+// IMPORTANT: LogBox must be configured BEFORE any other imports
+// to suppress error modals from native module linking issues during development
+import { LogBox } from "react-native";
+
+if (__DEV__) {
+  LogBox.ignoreLogs([
+    // Facebook SDK native module may not be linked during hot reload
+    "The package 'react-native-fbsdk-next' doesn't seem to be linked",
+    // NativeEventEmitter warning from Facebook SDK
+    "`new NativeEventEmitter()` requires a non-null argument",
+    // SecureStore size warning (Supabase JWTs can be large)
+    "SecureStore value exceeds 2048 bytes",
+    "Value being stored in SecureStore is larger than 2048 bytes",
+  ]);
+}
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SuperwallProvider } from "expo-superwall";
 import { NoteProvider } from "@/context/NoteContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { SubscriptionProvider } from "@/context/SubscriptionContext";
@@ -10,6 +27,7 @@ import { colors } from "@/constants/colors";
 import { logRouter } from "@/lib/debug";
 import { initializePostHog } from "@/lib/posthog";
 import { initializeFacebook } from "@/lib/facebook";
+import { SUPERWALL_API_KEY } from "@/lib/superwall";
 
 // Initialize Facebook SDK asynchronously (won't block app startup)
 // This is done outside the component to avoid re-initialization on re-renders
@@ -156,15 +174,24 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <AuthProvider>
-          <SubscriptionProvider>
-            <NoteProvider>
-              <AuthGuard>
-                <RootLayoutNav />
-              </AuthGuard>
-            </NoteProvider>
-          </SubscriptionProvider>
-        </AuthProvider>
+        <SuperwallProvider 
+          apiKeys={{ ios: SUPERWALL_API_KEY }}
+          onConfigurationError={(error) => {
+            if (__DEV__) {
+              console.log('[Superwall] Configuration error:', error);
+            }
+          }}
+        >
+          <AuthProvider>
+            <SubscriptionProvider>
+              <NoteProvider>
+                <AuthGuard>
+                  <RootLayoutNav />
+                </AuthGuard>
+              </NoteProvider>
+            </SubscriptionProvider>
+          </AuthProvider>
+        </SuperwallProvider>
       </GestureHandlerRootView>
     </QueryClientProvider>
   );

@@ -2,11 +2,15 @@
  * DictationSheet Component
  * Full-screen recording sheet with real-time AssemblyAI transcription
  * Wrapper around FullScreenRecordingSheet with recording session management
+ * 
+ * IMPORTANT: Recording is gated via Superwall paywall
  */
 
 import React, { useCallback, useEffect, useRef } from 'react';
 import { FullScreenRecordingSheet } from './FullScreenRecordingSheet';
 import { useRecordingSession } from '@/hooks/useRecordingSession';
+import { useSubscription } from '@/context/SubscriptionContext';
+import { trackEvent, ANALYTICS_EVENTS } from '@/lib/posthog';
 
 interface DictationSheetProps {
   visible: boolean;
@@ -23,6 +27,8 @@ export function DictationSheet({
   onInsert,
   onReplace,
 }: DictationSheetProps) {
+  const { registerGatedAction } = useSubscription();
+  
   const {
     recordingState,
     isRecording,
@@ -85,6 +91,26 @@ export function DictationSheet({
     onClose();
   }, [isRecording, cancelRecording, onClose]);
 
+  // Handle start recording - gated via Superwall
+  const handleStartRecording = useCallback(async () => {
+    if (__DEV__) {
+      console.log('[DictationSheet] Start recording pressed, calling registerGatedAction...');
+    }
+    
+    // Track that user attempted to record
+    trackEvent(ANALYTICS_EVENTS.RECORD_ATTEMPTED);
+    
+    // Use Superwall register to gate recording
+    // If user is subscribed, startRecording() is called immediately
+    // If not, paywall is shown; on success, startRecording() is called
+    await registerGatedAction(async () => {
+      if (__DEV__) {
+        console.log('[DictationSheet] Gated action callback - starting recording');
+      }
+      await startRecording();
+    });
+  }, [registerGatedAction, startRecording]);
+
   return (
     <FullScreenRecordingSheet
       visible={visible}
@@ -96,7 +122,7 @@ export function DictationSheet({
       finalText={finalText}
       partialText={partialText}
       error={error}
-      onStartRecording={startRecording}
+      onStartRecording={handleStartRecording}
       onStopRecording={stopRecording}
       onConfirm={handleConfirm}
       onCancel={handleCancel}

@@ -13,7 +13,7 @@ module.exports = {
      * Currently disabled due to potential compatibility issues with:
      * - react-native-live-audio-stream (audio streaming)
      * - react-native-fbsdk-next (Facebook SDK)
-     * - @superwall/react-native-superwall (paywall)
+     * - expo-superwall (paywall)
      * - react-native-purchases (RevenueCat)
      * 
      * To enable: Set to true and rebuild the app (expo run:ios / expo run:android)

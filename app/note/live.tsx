@@ -143,6 +143,9 @@ export default function LiveRecordingScreen() {
 
   // Handle record button press - gated via Superwall
   const handleRecordPress = useCallback(async () => {
+    if (__DEV__) {
+      console.log('[Live] Record button pressed, isRecording:', isRecording);
+    }
     if (isRecording) {
       // Stopping recording is not gated
       await stopRecording();
@@ -150,10 +153,17 @@ export default function LiveRecordingScreen() {
       // Track that user attempted to record
       trackEvent(ANALYTICS_EVENTS.RECORD_ATTEMPTED);
       
+      if (__DEV__) {
+        console.log('[Live] Calling registerGatedAction...');
+      }
+      
       // Use Superwall register to gate recording
       // If user is subscribed, startRecording() is called immediately
       // If not, paywall is shown; on success, startRecording() is called
       await registerGatedAction(async () => {
+        if (__DEV__) {
+          console.log('[Live] Gated action callback - starting recording');
+        }
         await startRecording();
       });
     }
