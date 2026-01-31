@@ -9,6 +9,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { FullScreenRecordingSheet } from './FullScreenRecordingSheet';
 import { useRecordingSession } from '@/hooks/useRecordingSession';
+import { useUsageStats } from '@/hooks/useUsageStats';
 import { useSubscription } from '@/context/SubscriptionContext';
 import { trackEvent, ANALYTICS_EVENTS } from '@/lib/posthog';
 
@@ -28,6 +29,7 @@ export function DictationSheet({
   onReplace,
 }: DictationSheetProps) {
   const { registerGatedAction } = useSubscription();
+  const { addRecordedMinutes } = useUsageStats();
   
   const {
     recordingState,
@@ -36,6 +38,7 @@ export function DictationSheet({
     finalText,
     partialText,
     error,
+    lastSessionDurationMs,
     startRecording,
     stopRecording,
     cancelRecording,
@@ -66,6 +69,20 @@ export function DictationSheet({
       resetSession();
     }
   }, [visible, resetSession]);
+
+  // Track usage when recording session ends
+  useEffect(() => {
+    if (lastSessionDurationMs > 0 && recordingState === 'done') {
+      // Convert ms to minutes, rounding up
+      const minutes = Math.ceil(lastSessionDurationMs / 60000);
+      if (minutes > 0) {
+        addRecordedMinutes(minutes);
+        if (__DEV__) {
+          console.log(`[DictationSheet] Recorded ${minutes} minutes, tracking usage...`);
+        }
+      }
+    }
+  }, [lastSessionDurationMs, recordingState, addRecordedMinutes]);
 
   // Handle confirm - insert the transcript
   const handleConfirm = useCallback(() => {

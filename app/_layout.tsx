@@ -23,6 +23,7 @@ import { SuperwallProvider } from "expo-superwall";
 import { NoteProvider } from "@/context/NoteContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { SubscriptionProvider } from "@/context/SubscriptionContext";
+import { AppUpdateProvider } from "@/context/AppUpdateContext";
 import { colors } from "@/constants/colors";
 import { logRouter } from "@/lib/debug";
 import { initializePostHog } from "@/lib/posthog";
@@ -183,13 +184,15 @@ export default function RootLayout() {
           }}
         >
           <AuthProvider>
-            <SubscriptionProvider>
-              <NoteProvider>
-                <AuthGuard>
-                  <RootLayoutNav />
-                </AuthGuard>
-              </NoteProvider>
-            </SubscriptionProvider>
+            <AppUpdateProvider>
+              <SubscriptionProvider>
+                <NoteProvider>
+                  <AuthGuard>
+                    <RootLayoutNav />
+                  </AuthGuard>
+                </NoteProvider>
+              </SubscriptionProvider>
+            </AppUpdateProvider>
           </AuthProvider>
         </SuperwallProvider>
       </GestureHandlerRootView>

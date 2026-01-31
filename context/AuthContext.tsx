@@ -320,23 +320,36 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   // Verify OTP code (for manual code entry)
   const verifyOtp = useCallback(
     async (email: string, token: string): Promise<{ error: AuthError | null }> => {
+      logAuth('Verifying OTP for email:', email);
+      
       const { data, error } = await supabase.auth.verifyOtp({
         email,
         token,
         type: 'email',
       });
       
-      if (!error && data.session) {
-        await validateClinikoCredentialOwnership(data.session.user.id);
-        await refreshClinikoKeyStatus();
-        
-        // Fire Facebook CompleteRegistration event for attribution
-        fbEvents.completeRegistration();
+      if (error) {
+        errorAuth('OTP verification failed:', error.message);
+        return { error };
       }
       
-      return { error };
+      if (data.session) {
+        logAuth('OTP verification successful, setting session for:', data.session.user.email);
+        
+        // IMPORTANT: Directly update state - don't rely on onAuthStateChange
+        // because it might skip events during initialization
+        setSession(data.session);
+        setUser(data.session.user);
+        
+        // Handle session setup (Cliniko validation, etc.)
+        await handleSessionEstablished(data.session.user, true);
+        
+        logAuth('Session state updated successfully');
+      }
+      
+      return { error: null };
     },
-    [refreshClinikoKeyStatus, validateClinikoCredentialOwnership]
+    [handleSessionEstablished]
   );
 
   const signOut = useCallback(async () => {

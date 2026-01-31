@@ -24,17 +24,24 @@ export const metadata: Metadata = {
     'treatment notes',
   ],
   authors: [{ name: 'Cliniko Voice' }],
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
   openGraph: {
     title: 'Cliniko Voice | Voice-to-Notes App Built for Cliniko',
     description: 'The voice-to-notes app designed exclusively for Cliniko users. Speak your notes, save directly to Cliniko.',
     type: 'website',
     locale: 'en_AU',
     siteName: 'Cliniko Voice',
+    images: ['/logo.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Cliniko Voice | Built for Cliniko Users',
     description: 'Speak your clinical notes, save directly to Cliniko treatment notes.',
+    images: ['/logo.png'],
   },
   robots: {
     index: true,
@@ -46,7 +53,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  themeColor: '#0d9488',
+  themeColor: '#007FA3',
 };
 
 export default function RootLayout({

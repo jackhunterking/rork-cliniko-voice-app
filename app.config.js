@@ -88,8 +88,24 @@ module.exports = {
     },
     extra: {
       eas: {
+        /**
+         * EAS Project ID - Required for EAS Build and EAS Update
+         * 
+         * To get your project ID:
+         * 1. Run `npx eas init` in your project root
+         * 2. Or visit https://expo.dev and find your project
+         * 3. Copy the ID from the project URL or settings
+         * 
+         * Format: UUID like "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+         */
         projectId: "your-eas-project-id"
-      }
+      },
+      /**
+       * App Store IDs - Required for force update feature
+       * Update these after your app is published
+       */
+      appStoreId: "6758525420", // iOS App Store ID (from App Store Connect)
+      playStoreId: "app.cliniko_voice", // Android package name (already set)
     }
   }
 };

@@ -15,12 +15,23 @@
               <h1 style="margin: 0 0 16px 0; color: #0B1220; font-size: 22px; font-weight: 600;">
                 Sign in to Cliniko Voice
               </h1>
-              <p style="margin: 0 0 32px 0; color: #5B667A; font-size: 15px; line-height: 1.5;">
-                Click the button below to sign in.
+              <p style="margin: 0 0 24px 0; color: #5B667A; font-size: 15px; line-height: 1.5;">
+                Enter this code in the app to sign in:
               </p>
-              <a href="{{ .ConfirmationURL }}" style="display: inline-block; padding: 14px 32px; background-color: #007FA3; color: #FFFFFF; text-decoration: none; font-size: 15px; font-weight: 600; border-radius: 14px;">
-                Sign In
-              </a>
+              
+              <!-- OTP Code Display -->
+              <div style="background-color: #F8F9FB; border-radius: 12px; padding: 24px 20px; margin-bottom: 24px;">
+                <p style="margin: 0 0 8px 0; color: #5B667A; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">
+                  Your verification code
+                </p>
+                <p style="margin: 0; color: #0B1220; font-size: 32px; font-weight: 700; letter-spacing: 4px; font-family: 'SF Mono', Monaco, Consolas, monospace;">
+                  {{ .Token }}
+                </p>
+              </div>
+              
+              <p style="margin: 0; color: #8A94A6; font-size: 13px; line-height: 1.5;">
+                This code expires in 1 hour.
+              </p>
             </td>
           </tr>
           

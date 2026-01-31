@@ -49,7 +49,7 @@ export default function SignInScreen() {
     setIsLoading(false);
     
     if (authError) {
-      setError(authError.message || "Failed to send magic link. Please try again.");
+      setError(authError.message || "Failed to send verification code. Please try again.");
     } else {
       setScreenState("sent");
     }
@@ -58,8 +58,8 @@ export default function SignInScreen() {
   const handleVerifyCode = async () => {
     setError("");
     
-    if (!code.trim() || code.trim().length !== 6) {
-      setError("Please enter the 6-digit code from your email");
+    if (!code.trim() || code.trim().length !== 8) {
+      setError("Please enter the 8-digit code from your email");
       return;
     }
 
@@ -95,18 +95,18 @@ export default function SignInScreen() {
   if (screenState === "sent") {
     return (
       <View style={styles.container}>
-        <Stack.Screen options={{ headerTitle: "Check your email" }} />
+        <Stack.Screen options={{ headerTitle: "Enter verification code" }} />
         <View style={styles.successContent}>
           <View style={styles.successIconContainer}>
             <CheckCircle size={48} color={colors.primary} />
           </View>
-          <Text style={styles.successTitle}>Magic link sent!</Text>
+          <Text style={styles.successTitle}>Code sent!</Text>
           <Text style={styles.successText}>
-            We sent a sign-in link to{"\n"}
+            We sent a verification code to{"\n"}
             <Text style={styles.emailHighlight}>{email}</Text>
           </Text>
           <Text style={styles.instructionText}>
-            Click the link in your email, or enter the 6-digit code below.
+            Enter the 8-digit code from your email below.
           </Text>
 
           {error ? (
@@ -122,15 +122,15 @@ export default function SignInScreen() {
                 style={styles.codeInput}
                 value={code}
                 onChangeText={(text) => {
-                  // Only allow numbers, max 6 digits
-                  const cleaned = text.replace(/[^0-9]/g, "").slice(0, 6);
+                  // Only allow numbers, max 8 digits
+                  const cleaned = text.replace(/[^0-9]/g, "").slice(0, 8);
                   setCode(cleaned);
                   if (error) setError("");
                 }}
-                placeholder="000000"
+                placeholder="00000000"
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="number-pad"
-                maxLength={6}
+                maxLength={8}
                 autoFocus
                 editable={!isLoading}
                 testID="code-input"
@@ -141,10 +141,10 @@ export default function SignInScreen() {
           <TouchableOpacity
             style={[
               styles.primaryButton,
-              (code.length !== 6 || isLoading) && styles.primaryButtonDisabled,
+              (code.length !== 8 || isLoading) && styles.primaryButtonDisabled,
             ]}
             onPress={handleVerifyCode}
-            disabled={code.length !== 6 || isLoading}
+            disabled={code.length !== 8 || isLoading}
             activeOpacity={0.8}
           >
             {isLoading ? (
@@ -188,7 +188,7 @@ export default function SignInScreen() {
           </View>
           
           <Text style={styles.description}>
-            Enter your email and we'll send you a magic link to sign in instantly. No password needed.
+            Enter your email and we'll send you a verification code to sign in. No password needed.
           </Text>
 
           {error ? (
@@ -233,7 +233,7 @@ export default function SignInScreen() {
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
-              <Text style={styles.primaryButtonText}>Send magic link</Text>
+              <Text style={styles.primaryButtonText}>Send verification code</Text>
             )}
           </TouchableOpacity>
 

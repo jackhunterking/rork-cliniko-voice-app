@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Linking,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,9 +21,8 @@ import {
   Lightbulb,
   Trash2,
   RefreshCw,
-  Bug,
   Clock,
-  CreditCard,
+  Crown,
 } from 'lucide-react-native';
 import { colors, spacing, radius } from '@/constants/colors';
 import { useAuth } from '@/context/AuthContext';
@@ -126,6 +127,31 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleManageSubscription = async () => {
+    try {
+      // iOS App Store subscription management URL
+      const subscriptionUrl = Platform.OS === 'ios' 
+        ? 'https://apps.apple.com/account/subscriptions'
+        : 'https://play.google.com/store/account/subscriptions';
+      
+      const canOpen = await Linking.canOpenURL(subscriptionUrl);
+      if (canOpen) {
+        await Linking.openURL(subscriptionUrl);
+      } else {
+        Alert.alert(
+          'Unable to Open',
+          'Could not open the subscription management page. Please go to Settings > Apple ID > Subscriptions on your device.',
+        );
+      }
+    } catch (error) {
+      console.error('Failed to open subscription management:', error);
+      Alert.alert(
+        'Error',
+        'Failed to open subscription management. Please try again.',
+      );
+    }
+  };
+
   const handleSignOut = () => {
     Alert.alert(
       'Sign Out',
@@ -164,11 +190,7 @@ export default function SettingsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity 
-          style={styles.profileCard}
-          activeOpacity={0.7}
-          onPress={() => console.log('Profile details')}
-        >
+        <View style={styles.profileCard}>
           <View style={styles.avatar}>
             <User size={28} color={colors.primary} />
           </View>
@@ -181,8 +203,19 @@ export default function SettingsScreen() {
               </Text>
             )}
           </View>
-          <ChevronRight size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          <View style={styles.menuCard}>
+            <MenuItem
+              icon={<Crown size={20} color={colors.primary} />}
+              label="Manage Subscription"
+              subtitle="View or cancel your subscription"
+              onPress={handleManageSubscription}
+            />
+          </View>
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Usage</Text>
@@ -265,13 +298,6 @@ export default function SettingsScreen() {
               label="Request a feature"
               onPress={() => router.push('/settings/feature-request')}
             />
-            <View style={styles.separator} />
-            <MenuItem
-              icon={<Bug size={20} color={colors.textSecondary} />}
-              label="Diagnostics"
-              subtitle="Debug info & connection test"
-              onPress={() => router.push('/settings/diagnostics')}
-            />
           </View>
         </View>
 
@@ -282,18 +308,6 @@ export default function SettingsScreen() {
               icon={<Trash2 size={20} color={colors.textSecondary} />}
               label="Delete my data"
               onPress={() => router.push('/settings/delete-data')}
-            />
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Developer</Text>
-          <View style={styles.menuCard}>
-            <MenuItem
-              icon={<CreditCard size={20} color={colors.primary} />}
-              label="Preview Paywall Design"
-              subtitle="View the conversion-optimized paywall"
-              onPress={() => router.push('/settings/paywall-preview')}
             />
           </View>
         </View>

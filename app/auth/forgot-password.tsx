@@ -10,8 +10,8 @@ import { colors, spacing, radius } from "@/constants/colors";
 import { TouchableOpacity } from "react-native";
 
 /**
- * Forgot Password screen - redirects to sign-in since we use Magic Links.
- * Magic Links handle both sign-in and account recovery automatically.
+ * Forgot Password screen - redirects to sign-in since we use verification codes.
+ * Verification codes handle both sign-in and account recovery automatically.
  */
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -26,7 +26,7 @@ export default function ForgotPasswordScreen() {
         <Text style={styles.heading}>No password needed!</Text>
         
         <Text style={styles.description}>
-          Cliniko Voice uses magic links instead of passwords. Just enter your email on the sign-in screen and we'll send you a secure link.
+          Cliniko Voice uses verification codes instead of passwords. Just enter your email on the sign-in screen and we'll send you a secure code.
         </Text>
 
         <TouchableOpacity
