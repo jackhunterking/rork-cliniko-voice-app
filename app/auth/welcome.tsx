@@ -90,6 +90,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     overflow: "hidden",
     marginBottom: spacing.lg,
+    backgroundColor: colors.background,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,

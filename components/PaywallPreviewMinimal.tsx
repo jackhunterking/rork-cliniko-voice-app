@@ -289,6 +289,7 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: radius.md,
     overflow: 'hidden',
+    backgroundColor: colors.primary,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,

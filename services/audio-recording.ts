@@ -1,10 +1,18 @@
 /**
  * Audio Recording Service
  * Handles microphone recording with expo-av and metering for waveform visualization
+ * 
+ * DEPRECATION NOTICE: expo-av is deprecated and will be removed in SDK 55.
+ * Migration to expo-audio is required before upgrading to SDK 55.
+ * See: https://docs.expo.dev/versions/latest/sdk/audio/
+ * 
+ * Note: The main audio streaming flow uses react-native-live-audio-stream
+ * which is independent of expo-av. This service is primarily used for
+ * permission requests and fallback recording functionality.
  */
 
 import { Audio, AVPlaybackStatus } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { AudioMeteringData, DEFAULT_RECORDING_CONFIG } from '@/types/streaming';
 
 // Audio recording options optimized for speech-to-text

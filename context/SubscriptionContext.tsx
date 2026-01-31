@@ -59,10 +59,10 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           try {
             const status = await Superwall.getSubscriptionStatus();
             if (mounted) {
-              const isActive = status === 'ACTIVE';
+              const isActive = status?.status === 'ACTIVE';
               setIsSubscribed(isActive);
               if (__DEV__) {
-                console.log('[Subscription] Initial status:', status, '| isActive:', isActive);
+                console.log('[Subscription] Initial status:', status?.status, '| isActive:', isActive);
               }
             }
           } catch (statusError) {
@@ -131,7 +131,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
             // Update subscription state
             try {
               const status = await Superwall.getSubscriptionStatus();
-              const isActive = status === 'ACTIVE';
+              const isActive = status?.status === 'ACTIVE';
               setIsSubscribed(isActive);
               
               if (isActive) {

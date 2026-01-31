@@ -7,6 +7,20 @@ module.exports = {
     icon: "./assets/images/icon.png",
     scheme: "rork-app",
     userInterfaceStyle: "automatic",
+    /**
+     * New Architecture (Fabric + TurboModules)
+     * 
+     * Currently disabled due to potential compatibility issues with:
+     * - react-native-live-audio-stream (audio streaming)
+     * - react-native-fbsdk-next (Facebook SDK)
+     * - @superwall/react-native-superwall (paywall)
+     * - react-native-purchases (RevenueCat)
+     * 
+     * To enable: Set to true and rebuild the app (expo run:ios / expo run:android)
+     * Test thoroughly on both platforms before deploying.
+     * 
+     * See: https://reactnative.dev/blog/2024/10/23/the-new-architecture-is-here
+     */
     newArchEnabled: false,
     splash: {
       image: "./assets/images/splash-icon.png",

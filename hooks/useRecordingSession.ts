@@ -2,6 +2,10 @@
  * useRecordingSession Hook
  * Orchestrates real-time audio streaming and AssemblyAI transcription
  * Manages state machine for recording flow
+ * 
+ * DEPRECATION NOTICE: expo-av is deprecated and will be removed in SDK 55.
+ * The Audio.requestPermissionsAsync() usage should be migrated to expo-audio.
+ * See: https://docs.expo.dev/versions/latest/sdk/audio/
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';

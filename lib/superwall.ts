@@ -63,8 +63,8 @@ export async function initializeSuperwall(): Promise<boolean> {
   }
 
   try {
-    // Configure Superwall with the API key (v2 API)
-    await module.Superwall.configure(SUPERWALL_API_KEY);
+    // Configure Superwall with the API key (v2 API uses object parameter)
+    await module.default.configure({ apiKey: SUPERWALL_API_KEY });
     
     if (__DEV__) {
       console.log('[Superwall] Initialized successfully with SDK v2 (native v4)');
@@ -106,7 +106,7 @@ export function isSuperwallReady(): boolean {
  */
 export function getSuperwallShared() {
   const module = getSuperwallModule();
-  return module?.Superwall?.shared || null;
+  return module?.default?.shared || null;
 }
 
 /**
@@ -121,8 +121,8 @@ export async function isSubscriptionActive(): Promise<boolean> {
 
   try {
     const status = await shared.getSubscriptionStatus();
-    // SDK v4 uses entitlements - ACTIVE means user has entitlements
-    return status === 'ACTIVE';
+    // SDK v4 returns an object with status property - ACTIVE means user has entitlements
+    return status?.status === 'ACTIVE';
   } catch (error) {
     console.error('[Superwall] Error checking subscription status:', error);
     return false;
@@ -137,7 +137,7 @@ export const Superwall = {
   configure: async (apiKey: string) => {
     const module = getSuperwallModule();
     if (module) {
-      return module.Superwall.configure(apiKey);
+      return module.default.configure({ apiKey });
     }
     throw new Error('Superwall native module not available');
   },
