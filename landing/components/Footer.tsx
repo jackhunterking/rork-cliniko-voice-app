@@ -36,6 +36,12 @@ export function Footer() {
             >
               Terms
             </a>
+            <a
+              href="/support"
+              className="text-slate-400 hover:text-white transition-colors"
+            >
+              Support
+            </a>
           </div>
         </div>
 
